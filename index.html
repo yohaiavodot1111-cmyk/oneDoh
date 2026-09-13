@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title> דו"ח אחד</title>
+<title>דו"ח אחד</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Miriam+Libre:wght@400;700&family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -994,10 +994,11 @@ function infoStrip(d){
 
   if(d.myBirthday){
     var mb = d.myBirthday;
+    var mbSub = mb.date ? esc(shortDate(mb.date)) : '';
     cards.push('<div class="info-c"><div class="info-ic">'+ic('present')+'</div>'
       + '<div><div class="info-l">יום ההולדת הבא שלי</div>'
       + '<div class="info-v">'+daysWord_(mb.daysUntil)+(( mb.age||mb.age===0)?(' (גיל '+mb.age+')'):'')+'</div>'
-      + '<div class="info-s">'+esc(shortDate(mb.date))+'</div></div></div>');
+      + (mbSub ? '<div class="info-s">'+mbSub+'</div>' : '')+'</div></div>');
   }
 
   if(typeof d.holidayDays === 'number'){
