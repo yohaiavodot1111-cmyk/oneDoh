@@ -1013,6 +1013,9 @@ function infoStrip(d){
   return strip;
 }
 
+function bindMyLog_(){
+  if(el('myLogBtn')) el('myLogBtn').addEventListener('click', function(){ openMonthLog(null, false); });
+}
 function drawStudent(){
   var d = stu.day;
 
@@ -1022,11 +1025,12 @@ function drawStudent(){
 
   // יום נעול על ידי ראש צוות או שלוחה
   if(d.dayLock && d.dayLock.locked){
-    el('view').innerHTML = '<div class="fade">'+heroBlock(d)
+    el('view').innerHTML = '<div class="fade">'+bd+heroBlock(d)
       + '<div class="verdict wait" style="border-top-color:var(--slate)">'
       + '<div class="v-head"><div class="v-ic" style="background:var(--sky-soft);color:var(--navy)">'+ic('ban')+'</div>'
       + '<div><div class="v-ttl">'+esc(d.dayLock.message||'אין דיווח היום')+'</div>'
       + '<div class="v-sub">היום נעול לדיווח על ידי הפיקוד</div></div></div></div></div>';
+    bindMyLog_();
     return;
   }
   // מצב נעול: תקציר עשיר בלבד
@@ -1035,6 +1039,7 @@ function drawStudent(){
   var dayTabsHtml = '<div class="daytabs" id="dayTabs"></div>';
   var futureBadge = future ? '<div class="banner warn">זהו דיווח עתידי לתאריך '+esc(shortDate(stuDate))+'. ניתן לעדכן אותו עד אותו היום.</div>' : '';
   el('view').innerHTML = '<div class="fade">'+bd+dayTabsHtml+futureBadge+heroBlock(d)+verdictBlock(d)+tipsBlock()+'</div>';
+    bindMyLog_();
     return;
   }
 
@@ -1092,7 +1097,7 @@ function drawStudent(){
     + '</div>';
 
   drawDayTabs();
-  if(el('myLogBtn')) el('myLogBtn').addEventListener('click', function(){ openMonthLog(null, false); });
+  bindMyLog_();
   if(el('openPicker')) el('openPicker').addEventListener('click', function(){ stu.picking = true; stu.showAbsence = isAbsence(stu.status); drawStudent(); });
   if(el('absBtn')) el('absBtn').addEventListener('click', function(){ stu.showAbsence = true; drawStudent(); });
   if(el('backBtn')) el('backBtn').addEventListener('click', function(){ stu.showAbsence = false; drawStudent(); });
