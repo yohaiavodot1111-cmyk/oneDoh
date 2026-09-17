@@ -382,7 +382,41 @@
   .repnote{background:var(--sky-soft); border:1px solid var(--line); border-inline-start:3px solid var(--blue);
     border-radius:3px; padding:12px 16px; margin-bottom:16px; font-size:13.5px; color:var(--navy);}
   .mg-toolbar{display:flex; gap:10px; flex-wrap:wrap;}
+  .mg-chips{display:flex; gap:7px; flex-wrap:wrap; margin:4px 0 14px;}
+  .mg-chip{border:1px solid var(--line); background:#fff; border-radius:20px; padding:6px 13px; font-size:13px; font-weight:600; color:var(--ink); cursor:pointer; font-family:inherit;}
+  .mg-chip.on{background:var(--navy); color:#fff; border-color:var(--navy);}
+  .mg-chipn{opacity:.7; font-size:11.5px; margin-inline-start:3px;}
+  .mg-groups{display:flex; flex-direction:column; gap:16px;}
+  .mg-group{border:1px solid var(--line); border-radius:12px; overflow:hidden; background:#fff;}
+  .mg-ghead{display:flex; align-items:center; justify-content:space-between; background:var(--sky-soft); padding:10px 16px; border-bottom:1px solid var(--line);}
+  .mg-gname{font-family:var(--display); font-weight:700; color:var(--navy); font-size:15px;}
+  .mg-gcount{font-size:12px; color:var(--muted);}
+  .mg-glist{display:flex; flex-direction:column;}
+  .mg-glist .mg-row{border:0; border-radius:0; border-bottom:1px solid var(--line-2);}
+  .mg-glist .mg-row:last-child{border-bottom:0;}
   .eqbadge{display:inline-block; padding:1px 8px; border-radius:20px; font-size:11.5px; font-weight:700; background:var(--sky-soft); color:var(--navy);}
+  .eqbadge.d-absent{background:#FBE3E3; color:var(--absent);}
+  /* פאנל השוחר */
+  .eq-panel{display:flex; flex-direction:column; gap:8px;}
+  .eq-item{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; border:1px solid var(--line); border-radius:10px; padding:12px 14px; background:#fff;}
+  .eq-iname{font-weight:700; font-size:15px;}
+  .eq-imeta{font-size:12px; color:var(--muted); margin-top:2px;}
+  .eq-sizes{font-size:12px; color:var(--ink); margin-top:4px;}
+  .eq-chips{display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;}
+  .eq-iright{display:flex; flex-direction:column; align-items:flex-end; gap:8px; flex:0 0 auto;}
+  /* פאנל המקס */
+  .eq-cards{display:flex; flex-direction:column; gap:14px;}
+  .eq-scard{border:1px solid var(--line); border-radius:12px; background:#fff; overflow:hidden;}
+  .eq-shead{display:flex; align-items:center; gap:12px; background:var(--sky-soft); padding:10px 16px; border-bottom:1px solid var(--line);}
+  .eq-sname{font-family:var(--display); font-weight:700; color:var(--navy); font-size:15px; flex:1 1 auto;}
+  .eq-sprog{font-size:12.5px; color:var(--muted);}
+  .eq-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; padding:14px 16px;}
+  @media(max-width:620px){ .eq-grid{grid-template-columns:repeat(2,1fr);} }
+  .eq-cell{display:flex; align-items:center; justify-content:space-between; gap:6px; border:1px solid var(--line-2); border-radius:8px; padding:8px 10px;}
+  .eq-cn{font-size:13px; color:var(--ink);}
+  .eq-acts{border-top:1px solid var(--line-2); padding:10px 16px; display:flex; flex-direction:column; gap:8px;}
+  .eq-actrow{display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:13.5px;}
+  .eq-wait{font-size:12px; color:var(--muted);}
   .eqbadge.d-present{background:#E7F3EC; color:var(--present);}
   .eqbadge.d-late{background:#FBF1DC; color:var(--late);}
   .mg-list{display:flex; flex-direction:column; gap:8px; margin-top:6px;}
@@ -2322,21 +2356,67 @@ function openEquipMine(){
     loadCatalog(function(){ drawEquipMine(d.items||[]); });
   }).catch(function(e){ closeModal(); toast(e.message, true); });
 }
+var EQ_TEMPLATE = [
+  {key:'shirt', name:'חולצה', req:3},
+  {key:'pants', name:'מכנסיים', req:3},
+  {key:'shoes', name:'נעליים', req:1},
+  {key:'beret', name:'כומתה', req:1},
+  {key:'unit_tag', name:'תג יחידה', req:1},
+  {key:'belt', name:'חגורה', req:1}
+];
+function eqSummary(items){
+  var map = {};
+  EQ_TEMPLATE.forEach(function(t){ map[t.key] = { t:t, received:0, sizes:[], acts:[] }; });
+  (items||[]).forEach(function(it){
+    var m = map[it.productKey];
+    if(!m){ m = { t:{key:it.productKey, name:it.product, req:0}, received:0, sizes:[], acts:[] }; map[it.productKey]=m; }
+    if(it.status==='received'){ m.received += it.quantity; if(it.size) m.sizes.push(it.size+(it.quantity>1?(' x'+it.quantity):'')); }
+    else m.acts.push(it);
+  });
+  return map;
+}
+function eqProdState(m){
+  var req=m.t.req, r=m.received;
+  if(req>0 && r>=req) return {label:'הושלם', cls:'d-present'};
+  if(r>0) return {label:r+' מתוך '+req, cls:'d-late'};
+  if(m.acts.length) return {label:'בטיפול', cls:''};
+  return {label:'חסר', cls:'d-absent'};
+}
+function eqActChip(it){
+  return '<span class="eqbadge '+eqStatusClass(it.status)+'">'+esc(EQ_STATUS[it.status]||it.status)
+    + (it.size?(' '+esc(it.size)):'') + (it.quantity>1?(' x'+it.quantity):'') + '</span>';
+}
+
 function drawEquipMine(items){
   var host=el('modalHost');
-  var rows = items.map(function(it){
-    var sz = it.size ? (' | מידה '+esc(it.size)) : '';
-    var signBtn = (it.status==='ready') ? '<button class="btn gold sm eq-sign" data-id="'+it.id+'">אישור קבלת ציוד</button>' : '';
-    var when = it.studentSignedAt ? ('<div class="mg-sub">נחתם '+esc(it.studentSignedAt)+'</div>') : '';
-    return '<div class="mg-row"><div class="mg-main"><div class="mg-name">'+esc(it.product)+' | כמות '+it.quantity+sz+'</div>'
-      + '<div class="mg-sub"><span class="eqbadge '+eqStatusClass(it.status)+'">'+esc(EQ_STATUS[it.status]||it.status)+'</span>'+(it.isInitial?' | חתימה על ציוד קיים':'')+'</div>'+when+'</div>'
-      + '<div class="mg-acts">'+signBtn+'</div></div>';
-  }).join('') || '<div class="muted center" style="padding:22px">אין פריטים עדיין</div>';
+  var sum = eqSummary(items);
+  var keys = EQ_TEMPLATE.map(function(t){return t.key;});
+  // פריטים שאינם בתבנית, אם יש
+  Object.keys(sum).forEach(function(k){ if(keys.indexOf(k)<0) keys.push(k); });
+
+  var done = 0;
+  var rows = keys.map(function(k){
+    var m = sum[k]; if(!m) return '';
+    var stt = eqProdState(m); if(stt.cls==='d-present') done++;
+    var reqTxt = m.t.req>0 ? ('נדרש '+m.t.req) : '';
+    var sizes = m.sizes.length ? ('<div class="eq-sizes">מידות שהתקבלו: '+esc(m.sizes.join(', '))+'</div>') : '';
+    var chips = m.acts.length ? ('<div class="eq-chips">'+m.acts.map(eqActChip).join('')+'</div>') : '';
+    var readyItem = m.acts.filter(function(a){return a.status==='ready';})[0];
+    var signBtn = readyItem ? '<button class="btn gold sm eq-sign" data-id="'+readyItem.id+'">אישור קבלת ציוד</button>' : '';
+    return '<div class="eq-item">'
+      + '<div class="eq-ileft"><div class="eq-iname">'+esc(m.t.name)+'</div>'
+      +   '<div class="eq-imeta">'+reqTxt+'</div>'+sizes+chips+'</div>'
+      + '<div class="eq-iright"><span class="eqbadge '+stt.cls+'">'+esc(stt.label)+'</span>'+signBtn+'</div>'
+      + '</div>';
+  }).join('');
+
   host.innerHTML='<div class="modal-bg" id="eqbg"><div class="modal" style="max-width:640px;max-height:92vh;overflow:auto">'
-    + '<div class="dhead"><div><div class="dname">האפסנאות שלי</div></div><button class="btn ghost sm" id="eqClose">סגירה</button></div>'
+    + '<div class="dhead"><div><div class="dname">האפסנאות שלי</div>'
+    +   '<div class="dmeta">הושלמו '+done+' מתוך '+EQ_TEMPLATE.length+' פריטים</div></div>'
+    +   '<button class="btn ghost sm" id="eqClose">סגירה</button></div>'
     + '<div class="m-body">'
     + '<div class="mg-toolbar"><button class="btn gold" id="eqDeclare">חתימה על ציוד קיים</button><button class="btn ghost" id="eqOrder">הזמנת פריט</button></div>'
-    + '<div class="mg-list" style="margin-top:12px">'+rows+'</div>'
+    + '<div class="eq-panel" style="margin-top:12px">'+rows+'</div>'
     + '</div></div></div>';
   el('eqClose').addEventListener('click', closeModal);
   el('eqbg').addEventListener('click', function(e){ if(e.target===el('eqbg')) closeModal(); });
@@ -2346,6 +2426,7 @@ function drawEquipMine(items){
     b.disabled=true; callServer('equipSign', App.token, +b.getAttribute('data-id')).then(function(){ toast('קבלת הציוד אושרה'); openEquipMine(); }).catch(function(e){ b.disabled=false; toast(e.message,true); });
   }); });
 }
+
 function equipForm(mode){
   loadCatalog(function(cat){
     var host=el('modalHost');
@@ -2383,36 +2464,70 @@ function openEquipClass(cls){
 }
 function drawEquipClass(cls, items){
   var host=el('modalHost');
-  var rows = items.map(function(it){
-    var sz = it.size ? (' | מידה '+esc(it.size)) : '';
-    var acts = '';
-    if(it.status==='pending') acts = '<button class="btn gold sm ec-act" data-id="'+it.id+'" data-a="approve">אישור</button>';
-    else if(it.status==='ordered'||it.status==='approved') acts = '<button class="btn gold sm ec-act" data-id="'+it.id+'" data-a="ready">פתיחה לחתימה</button>';
-    var when = it.studentSignedAt ? ('<div class="mg-sub">נחתם '+esc(it.studentSignedAt)+(it.issuer?(' | הנפיק '+esc(it.issuer)):'')+'</div>') : '';
-    return '<div class="mg-row"><div class="mg-main"><div class="mg-name">'+esc(it.studentName)+'</div>'
-      + '<div class="mg-sub">'+esc(it.product)+' | כמות '+it.quantity+sz+' | <span class="eqbadge '+eqStatusClass(it.status)+'">'+esc(EQ_STATUS[it.status]||it.status)+'</span>'+(it.isInitial?' | ציוד קיים':'')+'</div>'+when+'</div>'
-      + '<div class="mg-acts">'+acts+'</div></div>';
-  }).join('') || '<div class="muted center" style="padding:22px">אין פריטים לכיתה זו</div>';
-  host.innerHTML='<div class="modal-bg" id="ecbg"><div class="modal" style="max-width:820px;max-height:92vh;overflow:auto">'
-    + '<div class="dhead"><div><div class="dname">אפסנאות כיתה '+esc(cls)+'</div></div><button class="btn ghost sm" id="ecClose">סגירה</button></div>'
-    + '<div class="m-body"><div class="mg-toolbar"><button class="btn ghost" id="ecIssue">הנפקת פריט לשוחר</button></div>'
-    + '<div class="mg-list" style="margin-top:12px">'+rows+'</div></div></div></div>';
+  // קיבוץ לפי שוחר
+  var byStud = {};
+  (items||[]).forEach(function(it){
+    var g = byStud[it.studentId] || (byStud[it.studentId] = { name: it.studentName, items: [] });
+    g.items.push(it);
+  });
+  // רשימת שוחרים בכיתה מתוך המסך, כדי להציג גם מי שאין לו כלום
+  var classData = (cmdState.data && cmdState.data.classes || []).filter(function(c){return c.cls===cls;})[0];
+  var roster = classData ? classData.students : [];
+  roster.forEach(function(st){ if(!byStud[st.id]) byStud[st.id] = { name: st.name, items: [] }; });
+
+  var order = Object.keys(byStud).sort(function(a,b){ return byStud[a].name.localeCompare(byStud[b].name,'he'); });
+
+  var cards = order.map(function(sid){
+    var g = byStud[sid];
+    var sum = eqSummary(g.items);
+    var done = 0;
+    var grid = EQ_TEMPLATE.map(function(t){
+      var m = sum[t.key]; var stt = eqProdState(m); if(stt.cls==='d-present') done++;
+      return '<div class="eq-cell"><span class="eq-cn">'+esc(t.name)+'</span>'
+        + '<span class="eqbadge '+stt.cls+'">'+esc(stt.label)+'</span></div>';
+    }).join('');
+    // פעולות ממתינות: אישור חתימה התחלתית, פתיחה לחתימה, וממתין לחתימת שוחר
+    var acts = g.items.filter(function(it){ return it.status!=='received'; }).map(function(it){
+      var line = esc(it.product)+(it.size?(' '+esc(it.size)):'')+(it.quantity>1?(' x'+it.quantity):'');
+      var btn = '';
+      if(it.status==='pending') btn = '<button class="btn gold sm ec-act" data-id="'+it.id+'" data-a="approve">אישור</button>';
+      else if(it.status==='ordered'||it.status==='approved') btn = '<button class="btn gold sm ec-act" data-id="'+it.id+'" data-a="ready">פתיחה לחתימה</button>';
+      else if(it.status==='ready') btn = '<span class="eq-wait">ממתין לחתימת השוחר</span>';
+      return '<div class="eq-actrow"><span>'+line+' '+eqActChip(it)+'</span>'+btn+'</div>';
+    }).join('');
+    var actsBlock = acts ? ('<div class="eq-acts">'+acts+'</div>') : '';
+
+    return '<div class="eq-scard">'
+      + '<div class="eq-shead"><span class="eq-sname">'+esc(g.name)+'</span>'
+      +   '<span class="eq-sprog">'+done+' מתוך '+EQ_TEMPLATE.length+'</span>'
+      +   '<button class="btn slim sm ec-issue" data-id="'+esc(sid)+'" data-name="'+esc(g.name)+'">הנפקה</button></div>'
+      + '<div class="eq-grid">'+grid+'</div>'
+      + actsBlock
+      + '</div>';
+  }).join('') || '<div class="muted center" style="padding:22px">אין שוחרים בכיתה זו</div>';
+
+  host.innerHTML='<div class="modal-bg" id="ecbg"><div class="modal" style="max-width:860px;max-height:92vh;overflow:auto">'
+    + '<div class="dhead"><div><div class="dname">אפסנאות כיתה '+esc(cls)+'</div>'
+    +   '<div class="dmeta">'+order.length+' שוחרים</div></div>'
+    +   '<button class="btn ghost sm" id="ecClose">סגירה</button></div>'
+    + '<div class="m-body"><div class="eq-cards">'+cards+'</div></div></div></div>';
   el('ecClose').addEventListener('click', closeModal);
   el('ecbg').addEventListener('click', function(e){ if(e.target===el('ecbg')) closeModal(); });
-  el('ecIssue').addEventListener('click', function(){ equipIssueForm(cls); });
+  host.querySelectorAll('.ec-issue').forEach(function(b){ b.addEventListener('click', function(){ equipIssueForm(cls, b.getAttribute('data-id')); }); });
   host.querySelectorAll('.ec-act').forEach(function(b){ b.addEventListener('click', function(){
     b.disabled=true; callServer('equipAdvance', App.token, +b.getAttribute('data-id'), b.getAttribute('data-a'))
       .then(function(){ toast('בוצע'); openEquipClass(cls); }).catch(function(e){ b.disabled=false; toast(e.message,true); });
   }); });
 }
-function equipIssueForm(cls){
+
+function equipIssueForm(cls, preId){
   loadCatalog(function(cat){
     var studs = (cmdState.data && cmdState.data.classes || []).filter(function(c){return c.cls===cls;})[0];
     var list = studs ? studs.students : [];
     var host=el('modalHost');
     host.innerHTML='<div class="modal-bg" id="eibg"><div class="modal"><div class="m-body">'
       + '<h3>הנפקת פריט לשוחר</h3>'
-      + '<label>שוחר</label><select id="eiStud">'+list.map(function(x){return '<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>';}).join('')+'</select>'
+      + '<label>שוחר</label><select id="eiStud">'+list.map(function(x){return '<option value="'+esc(x.id)+'" '+(x.id===preId?'selected':'')+'>'+esc(x.name)+'</option>';}).join('')+'</select>'
       + '<label style="margin-top:10px">מוצר</label>'+productSelectHtml(cat,'eiProd')
       + '<div id="eiSizeWrap"></div>'
       + '<label style="margin-top:10px">כמות</label><input id="eiQty" type="number" min="1" value="1">'
@@ -2448,25 +2563,59 @@ function openManage(){
 function drawManage(){
   var host = el('modalHost');
   var f = mgState.filter.trim();
-  var list = mgState.students.filter(function(st){
+  if(mgState.classFilter === undefined) mgState.classFilter = 'all';
+
+  var matches = function(st){
     return !f || (st.first_name+' '+st.last_name).indexOf(f) >= 0
       || (st.personal_number||'').indexOf(f) >= 0 || (st.national_id||'').indexOf(f) >= 0;
+  };
+
+  // סינון לכיתה נבחרת ולחיפוש
+  var list = mgState.students.filter(function(st){
+    return matches(st) && (mgState.classFilter === 'all' || st.class_name === mgState.classFilter);
   });
-  var rows = list.map(function(st){
+
+  // קיבוץ לפי כיתה, לפי סדר הכיתות במערכת
+  var order = mgState.classes.slice();
+  var groups = {};
+  list.forEach(function(st){ (groups[st.class_name] = groups[st.class_name] || []).push(st); });
+  order.forEach(function(c){ if(!groups[c]) return; groups[c].sort(function(a,b){ return (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name,'he'); }); });
+
+  function studentCard(st){
     var idline = st.personal_number ? ('מ.א '+esc(st.personal_number)) : ('ת.ז '+esc(st.national_id));
     return '<div class="mg-row'+(st.active?'':' mg-off')+'">'
       + '<div class="mg-main"><div class="mg-name">'+esc(st.first_name+' '+st.last_name)+(st.active?'':' <span class="mg-badge">לא פעיל</span>')+'</div>'
-      + '<div class="mg-sub">כיתה '+esc(st.class_name)+' | '+idline+'</div></div>'
+      + '<div class="mg-sub">'+idline+'</div></div>'
       + '<div class="mg-acts">'
       + '<button class="btn slim sm mg-edit" data-id="'+esc(st.id)+'">עריכה</button>'
       + '<button class="btn '+(st.active?'ghost':'gold')+' sm mg-toggle" data-id="'+esc(st.id)+'" data-active="'+(st.active?'1':'0')+'">'+(st.active?'השבתה':'הפעלה')+'</button>'
       + '</div></div>';
-  }).join('');
-  if(!rows) rows = '<div class="muted center" style="padding:26px">לא נמצא שוחר</div>';
+  }
 
-  host.innerHTML = '<div class="modal-bg" id="mgbg"><div class="modal" style="max-width:760px;max-height:92vh;overflow:auto">'
+  var body = '';
+  var shown = order.filter(function(c){ return groups[c] && groups[c].length; });
+  if(!shown.length){ body = '<div class="muted center" style="padding:30px">לא נמצא שוחר</div>'; }
+  else {
+    body = shown.map(function(c){
+      var g = groups[c];
+      var activeN = g.filter(function(x){return x.active;}).length;
+      return '<div class="mg-group">'
+        + '<div class="mg-ghead"><span class="mg-gname">כיתה '+esc(c)+'</span>'
+        +   '<span class="mg-gcount">'+activeN+' פעילים'+(g.length>activeN?(' | '+(g.length-activeN)+' לא פעילים'):'')+'</span></div>'
+        + '<div class="mg-glist">'+g.map(studentCard).join('')+'</div></div>';
+    }).join('');
+  }
+
+  // שבב לכל כיתה לסינון מהיר
+  var chips = '<button class="mg-chip'+(mgState.classFilter==='all'?' on':'')+'" data-c="all">הכל</button>'
+    + mgState.classes.map(function(c){
+        var n = mgState.students.filter(function(x){return x.class_name===c;}).length;
+        return '<button class="mg-chip'+(mgState.classFilter===c?' on':'')+'" data-c="'+esc(c)+'">'+esc(c)+' <span class="mg-chipn">'+n+'</span></button>';
+      }).join('');
+
+  host.innerHTML = '<div class="modal-bg" id="mgbg"><div class="modal" style="max-width:820px;max-height:92vh;overflow:auto">'
     + '<div class="dhead"><div><div class="dname">ניהול שוחרים</div>'
-    +   '<div class="dmeta">'+mgState.students.length+' שוחרים במערכת</div></div>'
+    +   '<div class="dmeta">'+mgState.students.length+' שוחרים ב '+mgState.classes.length+' כיתות</div></div>'
     +   '<button class="btn ghost sm" id="mgClose">סגירה</button></div>'
     + '<div class="m-body">'
     + '<div class="mg-toolbar">'
@@ -2474,10 +2623,12 @@ function drawManage(){
     +   '<button class="btn '+(mgState.equipVisible?'gold':'ghost')+'" id="mgEquip">'+(mgState.equipVisible?'אפסנאות מוצגת לשוחרים':'אפסנאות מוסתרת מהשוחרים')+'</button>'
     + '</div>'
     + '<input id="mgSearch" placeholder="חיפוש לפי שם או מספר" value="'+esc(mgState.filter)+'" style="margin:12px 0">'
-    + '<div class="mg-list">'+rows+'</div>'
+    + '<div class="mg-chips">'+chips+'</div>'
+    + '<div class="mg-groups">'+body+'</div>'
     + '</div></div></div>';
 
   el('mgClose').addEventListener('click', closeModal);
+  host.querySelectorAll('.mg-chip').forEach(function(ch){ ch.addEventListener('click', function(){ mgState.classFilter = ch.getAttribute('data-c'); drawManage(); }); });
   el('mgbg').addEventListener('click', function(e){ if(e.target===el('mgbg')) closeModal(); });
   var si = el('mgSearch');
   si.addEventListener('input', function(){ mgState.filter = si.value; var pos=si.selectionStart; drawManage(); var n=el('mgSearch'); n.focus(); n.setSelectionRange(pos,pos); });
