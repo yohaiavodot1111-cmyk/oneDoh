@@ -381,6 +381,18 @@
 
   .repnote{background:var(--sky-soft); border:1px solid var(--line); border-inline-start:3px solid var(--blue);
     border-radius:3px; padding:12px 16px; margin-bottom:16px; font-size:13.5px; color:var(--navy);}
+  .mg-toolbar{display:flex; gap:10px; flex-wrap:wrap;}
+  .eqbadge{display:inline-block; padding:1px 8px; border-radius:20px; font-size:11.5px; font-weight:700; background:var(--sky-soft); color:var(--navy);}
+  .eqbadge.d-present{background:#E7F3EC; color:var(--present);}
+  .eqbadge.d-late{background:#FBF1DC; color:var(--late);}
+  .mg-list{display:flex; flex-direction:column; gap:8px; margin-top:6px;}
+  .mg-row{display:flex; align-items:center; gap:12px; border:1px solid var(--line); border-radius:10px; padding:12px 14px; background:#fff;}
+  .mg-row.mg-off{background:#F4F6F9; opacity:.75;}
+  .mg-main{flex:1 1 auto; min-width:0;}
+  .mg-name{font-weight:700; font-size:15px;}
+  .mg-badge{font-size:11px; color:var(--absent); font-weight:700; margin-inline-start:6px;}
+  .mg-sub{font-size:12.5px; color:var(--muted); margin-top:2px;}
+  .mg-acts{display:flex; gap:8px; flex:0 0 auto;}
   .dhead{display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:22px 24px 0;}
   .dname{font-family:var(--display); font-weight:700; font-size:22px; color:var(--navy);}
   .dmeta{font-size:13px; color:var(--muted);}
@@ -516,7 +528,19 @@ var RPC_MAP = {
   nadonInfo:           ['nadon_info',            ['p_token','p_student','p_date']],
   studentDashboard:    ['student_dashboard',     ['p_token','p_student','p_date']],
   monthLog:            ['month_log',             ['p_token','p_student','p_year','p_month']],
-  branchOverview:      ['branch_overview',       ['p_token','p_date']]
+  branchOverview:      ['branch_overview',       ['p_token','p_date']],
+  adminListStudents:   ['admin_list_students',   ['p_token']],
+  adminSaveStudent:    ['admin_save_student',    ['p_token','p_id','p_first','p_last','p_national','p_personal','p_class','p_birth']],
+  adminSetActive:      ['admin_set_student_active',['p_token','p_id','p_active']],
+  setEquipmentVisible: ['set_equipment_visible', ['p_token','p_on']],
+  equipCatalog:        ['equipment_catalog',     ['p_token']],
+  equipMine:           ['equipment_mine',        ['p_token']],
+  equipDeclare:        ['equipment_declare',     ['p_token','p_product','p_size','p_qty']],
+  equipOrder:          ['equipment_order',       ['p_token','p_product','p_size','p_qty']],
+  equipSign:           ['equipment_sign',        ['p_token','p_item']],
+  equipClass:          ['equipment_class',       ['p_token','p_class']],
+  equipAdvance:        ['equipment_advance',     ['p_token','p_item','p_action']],
+  equipIssue:          ['equipment_issue',       ['p_token','p_student','p_product','p_size','p_qty']]
 };
 
 function callServer(action){
@@ -1009,12 +1033,14 @@ function infoStrip(d){
   }
 
   var strip = cards.length ? '<div class="info-strip">'+cards.join('')+'</div>' : '';
-  strip += '<div style="margin-bottom:16px"><button class="btn ghost" id="myLogBtn">יומן חודשי</button></div>';
+  strip += '<div style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" id="myLogBtn">יומן חודשי</button>'
+    + (d.equipmentVisible ? '<button class="btn ghost" id="myEquipBtn">אפסנאות</button>' : '') + '</div>';
   return strip;
 }
 
 function bindMyLog_(){
   if(el('myLogBtn')) el('myLogBtn').addEventListener('click', function(){ openMonthLog(null, false); });
+  if(el('myEquipBtn')) el('myEquipBtn').addEventListener('click', openEquipMine);
 }
 function drawStudent(){
   var d = stu.day;
@@ -1201,6 +1227,7 @@ function paintCommander(d){
         + (canFuture ? '<button class="btn ghost" id="futureBtn">'+(d.futureOpen?'סגירת דיווח עתידי':'פתיחת דיווח עתידי')+'</button>' : '')
         + '<button class="btn ghost" id="bulkBtn">דיווח גורף</button>'
         + (canFuture ? '<button class="btn ghost" id="lockBtn">'+((d.dayLock&&d.dayLock.locked)?'ביטול נעילת היום':'נעילת היום')+'</button>' : '')
+        + (canFuture ? '<button class="btn ghost" id="manageBtn">ניהול שוחרים</button>' : '')
         + '</div>'
       : '';
     if(!d.classes.length){
@@ -1226,6 +1253,7 @@ function bindCmdTop(){
     toggleFuture(!!(cmdState.data && cmdState.data.futureOpen));
   });
   if(el('bulkBtn')) el('bulkBtn').addEventListener('click', openBulk);
+  if(el('manageBtn')) el('manageBtn').addEventListener('click', openManage);
   if(el('lockBtn')) el('lockBtn').addEventListener('click', function(){
     var locked = !!(cmdState.data && cmdState.data.dayLock && cmdState.data.dayLock.locked);
     if(locked){ callServer('setDayLock', App.token, App.date, false, '').then(function(){ toast('נעילת היום בוטלה'); renderCommander(); }).catch(function(e){toast(e.message,true);}); }
@@ -1364,7 +1392,8 @@ function renderClassPane(){
 
   el('classPane').innerHTML =
     '<div class="panel"><div class="head">'
-    + '<div><h2>כיתה '+esc(c.cls)+'</h2><div class="sub" style="margin-top:6px">'+classSummary(c)+'</div></div>'
+    + '<div><h2>כיתה '+esc(c.cls)+'</h2><div class="sub" style="margin-top:6px">'+classSummary(c)+'</div>'
+      + ((cmdState.data && cmdState.data.equipmentVisible) ? '<button class="btn ghost sm" id="eqClassBtn" style="margin-top:8px">אפסנאות הכיתה</button>' : '') + '</div>'
     + cutoffCtl + '</div>'
     + '<div class="body" style="padding:16px 24px;border-bottom:1px solid var(--line-2)">'
     + '<input id="searchInp" placeholder="חיפוש שוחר בשם" value="'+esc(filterText)+'" style="max-width:320px">'
@@ -1450,6 +1479,7 @@ function renderClassPane(){
       });
       recount(c); renderTabs(); renderClassPane();
     });
+    if(el('eqClassBtn')) el('eqClassBtn').addEventListener('click', function(){ openEquipClass(c.cls); });
     el('cutoffBtn').addEventListener('click', function(){
       var prev = c.cutoff, next = el('cutoffInp').value;
       c.cutoff = next;
@@ -2261,6 +2291,248 @@ function openDashboard(id){
 }
 
 /* ============ דיווח גורף ============ */
+/* ============ אפסנאות ============ */
+var EQ_CATALOG = null;
+var EQ_STATUS = { pending:'ממתין לאישור', approved:'אושר', ordered:'הוזמן', ready:'מוכן לחתימה', received:'התקבל ונחתם' };
+function eqStatusClass(st){ if(st==='received') return 'd-present'; if(st==='ready') return 'd-late'; if(st==='pending'||st==='ordered') return ''; return ''; }
+
+function loadCatalog(cb){
+  if(EQ_CATALOG){ cb(EQ_CATALOG); return; }
+  callServer('equipCatalog', App.token).then(function(c){ EQ_CATALOG=c; cb(c); }).catch(function(e){ toast(e.message,true); });
+}
+function sizeOptionsFor(cat, key, chosen){
+  var prod = (cat.products||[]).filter(function(p){return p.key===key;})[0];
+  if(!prod) return {kind:'none', html:''};
+  var kind = prod.sizeKind;
+  var arr = (cat.sizes||{})[kind] || [];
+  if(kind==='none' || !arr.length) return {kind:'none', html:''};
+  var opts = arr.map(function(z){ return '<option '+(z===chosen?'selected':'')+'>'+esc(z)+'</option>'; }).join('');
+  return {kind:kind, html:opts};
+}
+function productSelectHtml(cat, id){
+  return '<select id="'+id+'">'+(cat.products||[]).map(function(p){return '<option value="'+esc(p.key)+'">'+esc(p.name)+'</option>';}).join('')+'</select>';
+}
+
+/* ----- צד השוחר ----- */
+function openEquipMine(){
+  var host=el('modalHost');
+  host.innerHTML='<div class="modal-bg" id="eqbg"><div class="modal" style="max-width:640px;max-height:92vh;overflow:auto"><div class="m-body center">'+spinner()+'</div></div></div>';
+  callServer('equipMine', App.token).then(function(d){
+    if(!d.visible){ closeModal(); toast('רובריקת האפסנאות אינה פתוחה כרגע', true); return; }
+    loadCatalog(function(){ drawEquipMine(d.items||[]); });
+  }).catch(function(e){ closeModal(); toast(e.message, true); });
+}
+function drawEquipMine(items){
+  var host=el('modalHost');
+  var rows = items.map(function(it){
+    var sz = it.size ? (' | מידה '+esc(it.size)) : '';
+    var signBtn = (it.status==='ready') ? '<button class="btn gold sm eq-sign" data-id="'+it.id+'">אישור קבלת ציוד</button>' : '';
+    var when = it.studentSignedAt ? ('<div class="mg-sub">נחתם '+esc(it.studentSignedAt)+'</div>') : '';
+    return '<div class="mg-row"><div class="mg-main"><div class="mg-name">'+esc(it.product)+' | כמות '+it.quantity+sz+'</div>'
+      + '<div class="mg-sub"><span class="eqbadge '+eqStatusClass(it.status)+'">'+esc(EQ_STATUS[it.status]||it.status)+'</span>'+(it.isInitial?' | חתימה על ציוד קיים':'')+'</div>'+when+'</div>'
+      + '<div class="mg-acts">'+signBtn+'</div></div>';
+  }).join('') || '<div class="muted center" style="padding:22px">אין פריטים עדיין</div>';
+  host.innerHTML='<div class="modal-bg" id="eqbg"><div class="modal" style="max-width:640px;max-height:92vh;overflow:auto">'
+    + '<div class="dhead"><div><div class="dname">האפסנאות שלי</div></div><button class="btn ghost sm" id="eqClose">סגירה</button></div>'
+    + '<div class="m-body">'
+    + '<div class="mg-toolbar"><button class="btn gold" id="eqDeclare">חתימה על ציוד קיים</button><button class="btn ghost" id="eqOrder">הזמנת פריט</button></div>'
+    + '<div class="mg-list" style="margin-top:12px">'+rows+'</div>'
+    + '</div></div></div>';
+  el('eqClose').addEventListener('click', closeModal);
+  el('eqbg').addEventListener('click', function(e){ if(e.target===el('eqbg')) closeModal(); });
+  el('eqDeclare').addEventListener('click', function(){ equipForm('declare'); });
+  el('eqOrder').addEventListener('click', function(){ equipForm('order'); });
+  host.querySelectorAll('.eq-sign').forEach(function(b){ b.addEventListener('click', function(){
+    b.disabled=true; callServer('equipSign', App.token, +b.getAttribute('data-id')).then(function(){ toast('קבלת הציוד אושרה'); openEquipMine(); }).catch(function(e){ b.disabled=false; toast(e.message,true); });
+  }); });
+}
+function equipForm(mode){
+  loadCatalog(function(cat){
+    var host=el('modalHost');
+    var title = mode==='declare' ? 'חתימה על ציוד קיים בבית' : 'הזמנת פריט';
+    host.innerHTML='<div class="modal-bg" id="efbg"><div class="modal"><div class="m-body">'
+      + '<h3>'+title+'</h3>'
+      + '<label>מוצר</label>'+productSelectHtml(cat,'efProd')
+      + '<div id="efSizeWrap"></div>'
+      + '<label style="margin-top:10px">כמות</label><input id="efQty" type="number" min="1" value="1">'
+      + '<div class="m-actions"><button class="btn gold" id="efSave">שמירה</button><button class="btn ghost" id="efCancel">ביטול</button></div>'
+      + '</div></div></div>';
+    function refreshSize(){
+      var so = sizeOptionsFor(cat, el('efProd').value, '');
+      el('efSizeWrap').innerHTML = (so.kind==='none') ? '' : '<label style="margin-top:10px">מידה</label><select id="efSize">'+so.html+'</select>';
+    }
+    refreshSize();
+    el('efProd').addEventListener('change', refreshSize);
+    el('efCancel').addEventListener('click', openEquipMine);
+    el('efSave').addEventListener('click', function(){
+      var prod=el('efProd').value, size=el('efSize')?el('efSize').value:'', qty=+el('efQty').value||1;
+      var btn=el('efSave'); btn.disabled=true; btn.textContent='שומר';
+      var action = mode==='declare' ? 'equipDeclare' : 'equipOrder';
+      callServer(action, App.token, prod, size, qty).then(function(){ toast(mode==='declare'?'נשלח לאישור המקס':'ההזמנה נקלטה'); openEquipMine(); })
+        .catch(function(e){ btn.disabled=false; btn.textContent='שמירה'; toast(e.message,true); });
+    });
+  });
+}
+
+/* ----- צד המקס ----- */
+function openEquipClass(cls){
+  var host=el('modalHost');
+  host.innerHTML='<div class="modal-bg" id="ecbg"><div class="modal" style="max-width:820px;max-height:92vh;overflow:auto"><div class="m-body center">'+spinner()+'</div></div></div>';
+  callServer('equipClass', App.token, cls).then(function(d){ loadCatalog(function(){ drawEquipClass(cls, d.items||[]); }); })
+    .catch(function(e){ closeModal(); toast(e.message, true); });
+}
+function drawEquipClass(cls, items){
+  var host=el('modalHost');
+  var rows = items.map(function(it){
+    var sz = it.size ? (' | מידה '+esc(it.size)) : '';
+    var acts = '';
+    if(it.status==='pending') acts = '<button class="btn gold sm ec-act" data-id="'+it.id+'" data-a="approve">אישור</button>';
+    else if(it.status==='ordered'||it.status==='approved') acts = '<button class="btn gold sm ec-act" data-id="'+it.id+'" data-a="ready">פתיחה לחתימה</button>';
+    var when = it.studentSignedAt ? ('<div class="mg-sub">נחתם '+esc(it.studentSignedAt)+(it.issuer?(' | הנפיק '+esc(it.issuer)):'')+'</div>') : '';
+    return '<div class="mg-row"><div class="mg-main"><div class="mg-name">'+esc(it.studentName)+'</div>'
+      + '<div class="mg-sub">'+esc(it.product)+' | כמות '+it.quantity+sz+' | <span class="eqbadge '+eqStatusClass(it.status)+'">'+esc(EQ_STATUS[it.status]||it.status)+'</span>'+(it.isInitial?' | ציוד קיים':'')+'</div>'+when+'</div>'
+      + '<div class="mg-acts">'+acts+'</div></div>';
+  }).join('') || '<div class="muted center" style="padding:22px">אין פריטים לכיתה זו</div>';
+  host.innerHTML='<div class="modal-bg" id="ecbg"><div class="modal" style="max-width:820px;max-height:92vh;overflow:auto">'
+    + '<div class="dhead"><div><div class="dname">אפסנאות כיתה '+esc(cls)+'</div></div><button class="btn ghost sm" id="ecClose">סגירה</button></div>'
+    + '<div class="m-body"><div class="mg-toolbar"><button class="btn ghost" id="ecIssue">הנפקת פריט לשוחר</button></div>'
+    + '<div class="mg-list" style="margin-top:12px">'+rows+'</div></div></div></div>';
+  el('ecClose').addEventListener('click', closeModal);
+  el('ecbg').addEventListener('click', function(e){ if(e.target===el('ecbg')) closeModal(); });
+  el('ecIssue').addEventListener('click', function(){ equipIssueForm(cls); });
+  host.querySelectorAll('.ec-act').forEach(function(b){ b.addEventListener('click', function(){
+    b.disabled=true; callServer('equipAdvance', App.token, +b.getAttribute('data-id'), b.getAttribute('data-a'))
+      .then(function(){ toast('בוצע'); openEquipClass(cls); }).catch(function(e){ b.disabled=false; toast(e.message,true); });
+  }); });
+}
+function equipIssueForm(cls){
+  loadCatalog(function(cat){
+    var studs = (cmdState.data && cmdState.data.classes || []).filter(function(c){return c.cls===cls;})[0];
+    var list = studs ? studs.students : [];
+    var host=el('modalHost');
+    host.innerHTML='<div class="modal-bg" id="eibg"><div class="modal"><div class="m-body">'
+      + '<h3>הנפקת פריט לשוחר</h3>'
+      + '<label>שוחר</label><select id="eiStud">'+list.map(function(x){return '<option value="'+esc(x.id)+'">'+esc(x.name)+'</option>';}).join('')+'</select>'
+      + '<label style="margin-top:10px">מוצר</label>'+productSelectHtml(cat,'eiProd')
+      + '<div id="eiSizeWrap"></div>'
+      + '<label style="margin-top:10px">כמות</label><input id="eiQty" type="number" min="1" value="1">'
+      + '<div class="m-actions"><button class="btn gold" id="eiSave">הנפקה</button><button class="btn ghost" id="eiCancel">ביטול</button></div>'
+      + '</div></div></div>';
+    function rs(){ var so=sizeOptionsFor(cat, el('eiProd').value, ''); el('eiSizeWrap').innerHTML=(so.kind==='none')?'':'<label style="margin-top:10px">מידה</label><select id="eiSize">'+so.html+'</select>'; }
+    rs(); el('eiProd').addEventListener('change', rs);
+    el('eiCancel').addEventListener('click', function(){ openEquipClass(cls); });
+    el('eiSave').addEventListener('click', function(){
+      var sid=el('eiStud').value, prod=el('eiProd').value, size=el('eiSize')?el('eiSize').value:'', qty=+el('eiQty').value||1;
+      if(!sid){ toast('יש לבחור שוחר', true); return; }
+      var btn=el('eiSave'); btn.disabled=true; btn.textContent='מנפיק';
+      callServer('equipIssue', App.token, sid, prod, size, qty).then(function(){ toast('הפריט הונפק ופתוח לחתימה'); openEquipClass(cls); })
+        .catch(function(e){ btn.disabled=false; btn.textContent='הנפקה'; toast(e.message,true); });
+    });
+  });
+}
+
+/* ============ ניהול שוחרים ============ */
+var mgState = { students: [], classes: [], filter: '', equipVisible: false };
+
+function openManage(){
+  var host = el('modalHost');
+  host.innerHTML = '<div class="modal-bg" id="mgbg"><div class="modal" style="max-width:760px;max-height:92vh;overflow:auto"><div class="m-body center">'+spinner()+'</div></div></div>';
+  callServer('adminListStudents', App.token).then(function(d){
+    mgState.students = d.students || [];
+    mgState.classes = d.classes || [];
+    mgState.equipVisible = (cmdState.data && cmdState.data.equipmentVisible) || false;
+    drawManage();
+  }).catch(function(e){ closeModal(); toast(e.message, true); });
+}
+
+function drawManage(){
+  var host = el('modalHost');
+  var f = mgState.filter.trim();
+  var list = mgState.students.filter(function(st){
+    return !f || (st.first_name+' '+st.last_name).indexOf(f) >= 0
+      || (st.personal_number||'').indexOf(f) >= 0 || (st.national_id||'').indexOf(f) >= 0;
+  });
+  var rows = list.map(function(st){
+    var idline = st.personal_number ? ('מ.א '+esc(st.personal_number)) : ('ת.ז '+esc(st.national_id));
+    return '<div class="mg-row'+(st.active?'':' mg-off')+'">'
+      + '<div class="mg-main"><div class="mg-name">'+esc(st.first_name+' '+st.last_name)+(st.active?'':' <span class="mg-badge">לא פעיל</span>')+'</div>'
+      + '<div class="mg-sub">כיתה '+esc(st.class_name)+' | '+idline+'</div></div>'
+      + '<div class="mg-acts">'
+      + '<button class="btn slim sm mg-edit" data-id="'+esc(st.id)+'">עריכה</button>'
+      + '<button class="btn '+(st.active?'ghost':'gold')+' sm mg-toggle" data-id="'+esc(st.id)+'" data-active="'+(st.active?'1':'0')+'">'+(st.active?'השבתה':'הפעלה')+'</button>'
+      + '</div></div>';
+  }).join('');
+  if(!rows) rows = '<div class="muted center" style="padding:26px">לא נמצא שוחר</div>';
+
+  host.innerHTML = '<div class="modal-bg" id="mgbg"><div class="modal" style="max-width:760px;max-height:92vh;overflow:auto">'
+    + '<div class="dhead"><div><div class="dname">ניהול שוחרים</div>'
+    +   '<div class="dmeta">'+mgState.students.length+' שוחרים במערכת</div></div>'
+    +   '<button class="btn ghost sm" id="mgClose">סגירה</button></div>'
+    + '<div class="m-body">'
+    + '<div class="mg-toolbar">'
+    +   '<button class="btn gold" id="mgAdd">הוספת שוחר</button>'
+    +   '<button class="btn '+(mgState.equipVisible?'gold':'ghost')+'" id="mgEquip">'+(mgState.equipVisible?'אפסנאות מוצגת לשוחרים':'אפסנאות מוסתרת מהשוחרים')+'</button>'
+    + '</div>'
+    + '<input id="mgSearch" placeholder="חיפוש לפי שם או מספר" value="'+esc(mgState.filter)+'" style="margin:12px 0">'
+    + '<div class="mg-list">'+rows+'</div>'
+    + '</div></div></div>';
+
+  el('mgClose').addEventListener('click', closeModal);
+  el('mgbg').addEventListener('click', function(e){ if(e.target===el('mgbg')) closeModal(); });
+  var si = el('mgSearch');
+  si.addEventListener('input', function(){ mgState.filter = si.value; var pos=si.selectionStart; drawManage(); var n=el('mgSearch'); n.focus(); n.setSelectionRange(pos,pos); });
+  el('mgAdd').addEventListener('click', function(){ editStudent(null); });
+  el('mgEquip').addEventListener('click', toggleEquipment);
+  host.querySelectorAll('.mg-edit').forEach(function(b){ b.addEventListener('click', function(){ editStudent(b.getAttribute('data-id')); }); });
+  host.querySelectorAll('.mg-toggle').forEach(function(b){ b.addEventListener('click', function(){
+    var id=b.getAttribute('data-id'), makeActive = b.getAttribute('data-active')!=='1';
+    b.disabled=true;
+    callServer('adminSetActive', App.token, id, makeActive).then(function(){
+      var st = mgState.students.filter(function(x){return x.id===id;})[0]; if(st) st.active = makeActive;
+      drawManage(); toast(makeActive?'השוחר הופעל':'השוחר הושבת'); renderCommander();
+    }).catch(function(e){ b.disabled=false; toast(e.message, true); });
+  }); });
+}
+
+function editStudent(id){
+  var st = id ? mgState.students.filter(function(x){return x.id===id;})[0] : {first_name:'',last_name:'',national_id:'',personal_number:'',class_name:(mgState.classes[0]||''),birth_date:''};
+  if(!st) return;
+  var host = el('modalHost');
+  var classOpts = mgState.classes.map(function(c){ return '<option '+(c===st.class_name?'selected':'')+'>'+esc(c)+'</option>'; }).join('');
+  host.innerHTML = '<div class="modal-bg" id="esbg"><div class="modal"><div class="m-body">'
+    + '<h3>'+(id?'עריכת שוחר':'הוספת שוחר')+'</h3>'
+    + '<label>שם פרטי</label><input id="esFirst" value="'+esc(st.first_name)+'">'
+    + '<label style="margin-top:10px">שם משפחה</label><input id="esLast" value="'+esc(st.last_name)+'">'
+    + '<label style="margin-top:10px">מספר אישי</label><input id="esPn" value="'+esc(st.personal_number)+'" placeholder="אם אין, השאירו ריק">'
+    + '<label style="margin-top:10px">תעודת זהות</label><input id="esNid" value="'+esc(st.national_id)+'" placeholder="חובה מספר אישי או תעודת זהות">'
+    + '<label style="margin-top:10px">כיתה</label><select id="esClass">'+classOpts+'</select>'
+    + '<label style="margin-top:10px">תאריך לידה</label><input id="esBirth" type="date" value="'+(st.birth_date?toISO(st.birth_date):'')+'">'
+    + '<div class="m-actions"><button class="btn gold" id="esSave">שמירה</button><button class="btn ghost" id="esCancel">ביטול</button></div>'
+    + '</div></div></div>';
+  el('esCancel').addEventListener('click', function(){ drawManage(); });
+  el('esSave').addEventListener('click', function(){
+    var first=el('esFirst').value.trim(), last=el('esLast').value.trim(),
+        pn=el('esPn').value.trim(), nid=el('esNid').value.trim(),
+        cls=el('esClass').value, birth=el('esBirth').value ? fromISO(el('esBirth').value) : '';
+    if(!first||!last){ toast('חובה שם פרטי ושם משפחה', true); return; }
+    if(!pn&&!nid){ toast('חובה מספר אישי או תעודת זהות', true); return; }
+    var btn=el('esSave'); btn.disabled=true; btn.textContent='שומר';
+    callServer('adminSaveStudent', App.token, id||'', first, last, nid, pn, cls, birth).then(function(){
+      toast(id?'השוחר עודכן':'השוחר נוסף'); openManage(); renderCommander();
+    }).catch(function(e){ btn.disabled=false; btn.textContent='שמירה'; toast(e.message, true); });
+  });
+}
+
+function toggleEquipment(){
+  var next = !mgState.equipVisible;
+  callServer('setEquipmentVisible', App.token, next).then(function(){
+    mgState.equipVisible = next;
+    if(cmdState.data) cmdState.data.equipmentVisible = next;
+    drawManage();
+    toast(next?'האפסנאות מוצגת לשוחרים':'האפסנאות מוסתרת מהשוחרים');
+  }).catch(function(e){ toast(e.message, true); });
+}
+
 function openBulk(){
   var p = App.profile;
   var canAll = (p.role==='ראש צוות' || p.role==='מפקד שלוחה');
