@@ -413,6 +413,10 @@
   /* כרטיסי מוצר לשוחר */
   .eqgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:14px;}
   .eqgrid-inline{grid-template-columns:repeat(3,1fr);}
+  .eq-inline-head{display:flex;align-items:center;justify-content:space-between;margin:4px 0 10px;}
+  #dEquipBody .eq-grid{padding:0;grid-template-columns:repeat(3,1fr);}
+  @media(max-width:560px){ #dEquipBody .eq-grid{grid-template-columns:repeat(2,1fr);} }
+  #dEquipBody .eq-acts{border-top:1px solid var(--line-2);padding:10px 0 0;margin-top:10px;}
   @media(max-width:900px){ .eqgrid-inline{grid-template-columns:repeat(2,1fr);} }
   @media(max-width:560px){ .eqgrid-inline{grid-template-columns:1fr;} }
   .eq-inline .head{display:flex;align-items:center;justify-content:space-between;}
@@ -2403,7 +2407,6 @@ function openDashboard(id){
       +   '<div class="dmeta">כיתה '+esc(d.cls)+'</div>'
       +   '<div class="dmeta" style="margin-top:2px">'+idLine+'</div></div>'
       +   '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost sm" id="dLog">יומן חודשי</button>'
-      +   ((cmdState.data && cmdState.data.equipmentVisible) ? '<button class="btn ghost sm" id="dEquip">אפסנאות</button>' : '')
       +   '<button class="btn ghost sm" id="dClose">סגירה</button></div></div>'
       + '<div class="m-body">'
       +   '<div class="dgrid">'
@@ -2420,10 +2423,11 @@ function openDashboard(id){
       +   '<div class="drow"><span>היעדרויות מ 1.9</span><b>'+d.seasonAbsent+'</b></div>'
       +   '<div class="drow"><span>ימים ללא דיווח מ 1.9</span><b>'+d.seasonNoReport+'</b></div>'
       +   '<div class="drow"><span>ימים שנספרו מ 1.9</span><b>'+(d.trackedDays||0)+'</b></div>'
+      +   ((cmdState.data && cmdState.data.equipmentVisible) ? ('<div class="dsec">אפסנאות</div><div id="dEquipBody">'+spinner()+'</div>') : '')
       + '</div></div></div>';
     el('dClose').addEventListener('click', closeModal);
     if(el('dLog')) el('dLog').addEventListener('click', function(){ openMonthLog(d.id, true); });
-    if(el('dEquip')) el('dEquip').addEventListener('click', function(){ openEquipStudent(d.cls, d.id, d.name); });
+    if(el('dEquipBody')) renderStudentEquipInline(d.cls, d.id, d.name);
     el('dbg').addEventListener('click', function(e){ if(e.target===el('dbg')) closeModal(); });
   }).catch(function(e){ closeModal(); toast(e.message, true); });
 }
@@ -2642,13 +2646,16 @@ function ecDo(btn, action, args, cls, reopen){
   btn.disabled=true;
   callServer.apply(null,[action, App.token].concat(args)).then(function(){ toast('בוצע'); if(reopen) reopen(); else openEquipClass(cls); }).catch(function(e){ btn.disabled=false; toast(e.message,true); });
 }
-function openEquipStudent(cls, sid, name){
-  var host=el('modalHost');
-  host.innerHTML='<div class="eqscreen" id="eqScreen"><div class="eqbody center" style="padding-top:80px">'+spinner()+'</div></div>';
-  callServer('equipClass', App.token, cls).then(function(d){ loadCatalog(function(){ drawEquipStudent(cls, sid, name, (d.items||[]).filter(function(it){return it.studentId===sid;})); }); })
-    .catch(function(e){ closeModal(); toast(e.message, true); });
+function renderStudentEquipInline(cls, sid, name){
+  var host=el('dEquipBody'); if(!host) return;
+  loadCatalog(function(){
+    callServer('equipClass', App.token, cls).then(function(d){
+      drawStudentEquipInline(cls, sid, name, (d.items||[]).filter(function(it){return it.studentId===sid;}));
+    }).catch(function(e){ host.innerHTML='<div class="muted">לא ניתן לטעון אפסנאות</div>'; });
+  });
 }
-function drawEquipStudent(cls, sid, name, items){
+function drawStudentEquipInline(cls, sid, name, items){
+  var host=el('dEquipBody'); if(!host) return;
   var sum=eqSummary(items), done=0;
   var grid=EQ_TEMPLATE.map(function(t){ var m=sum[t.key], stt=eqProdState(m); if(stt.cls==='d-present') done++;
     return '<div class="eq-cell"><span class="eq-cn">'+esc(t.name)+'</span><span class="eqbadge '+stt.cls+'">'+esc(stt.label)+'</span></div>'; }).join('');
@@ -2664,16 +2671,13 @@ function drawEquipStudent(cls, sid, name, items){
   }).join('');
   var retN=items.filter(function(it){return it.status==='returned';}).length;
   var retLine=retN?('<div class="eq-actrow muted"><span>הוחזרו '+retN+' פריטים</span></div>'):'';
-  var body='<div class="eq-scard"><div class="eq-shead"><span class="eq-sname">'+esc(name)+'</span>'
-    + '<span class="eq-sprog">'+done+' / '+EQ_TEMPLATE.length+'</span>'
-    + '<button class="btn slim xs" id="esIssue">הנפקה</button></div>'
-    + '<div class="eq-grid">'+grid+'</div>'
-    + ((actRows||retLine)?('<div class="eq-acts">'+actRows+retLine+'</div>'):'')
-    + '</div>';
-  el('modalHost').innerHTML = eqScreen('אפסנאות | '+name, 'כיתה '+cls, body);
-  el('eqBack').addEventListener('click', function(){ openDashboard(sid); });
-  var host=el('modalHost'); var reopen=function(){ openEquipStudent(cls, sid, name); };
-  el('esIssue').addEventListener('click', function(){ equipIssueForm(cls, sid, reopen); });
+  host.innerHTML='<div class="eq-inline-head"><span class="eq-sprog">הושלמו '+done+' מתוך '+EQ_TEMPLATE.length+'</span>'
+    + '<button class="btn slim sm" id="dsIssue">הנפקת פריט</button></div>'
+    + '<div class="eq-grid eq-grid-inline">'+grid+'</div>'
+    + ((actRows||retLine)?('<div class="eq-acts">'+actRows+retLine+'</div>'):'');
+
+  var reopen=function(){ renderStudentEquipInline(cls, sid, name); };
+  el('dsIssue').addEventListener('click', function(){ equipIssueForm(cls, sid, reopen); });
   host.querySelectorAll('.ec-act').forEach(function(b){ b.addEventListener('click', function(){ ecDo(b,'equipAdvance',[+b.getAttribute('data-id'),b.getAttribute('data-a')], null, reopen); }); });
   host.querySelectorAll('.ec-unsign').forEach(function(b){ b.addEventListener('click', function(){ ecDo(b,'equipUnsign',[+b.getAttribute('data-id')], null, reopen); }); });
   host.querySelectorAll('.ec-return').forEach(function(b){ b.addEventListener('click', function(){ if(confirm('להחזיר את הפריט? הוא לא ייספר בסך הכולל')) ecDo(b,'equipReturn',[+b.getAttribute('data-id')], null, reopen); }); });
@@ -2681,7 +2685,7 @@ function drawEquipStudent(cls, sid, name, items){
   host.querySelectorAll('.ec-edit').forEach(function(b){ b.addEventListener('click', function(){ equipEditForm(b.getAttribute('data-id'), b.getAttribute('data-p'), b.getAttribute('data-s'), +b.getAttribute('data-q'), {reopen:reopen}); }); });
 }
 
-/* הורדת אקסל תכלול הזמנות פתוחות */
+/* הורדת אקסל תכלול הזמנות פתוחות *//* הורדת אקסל תכלול הזמנות פתוחות */
 function downloadOrdersExcel(btn){
   if(btn){ btn.disabled=true; btn.textContent='מכין'; }
   callServer('equipOpenOrders', App.token).then(function(d){ exportOrdersExcel(d); if(btn){ btn.disabled=false; btn.textContent='תכלול הזמנות'; } })
