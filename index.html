@@ -487,6 +487,7 @@
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 </head>
 <body>
 
@@ -600,7 +601,8 @@ var RPC_MAP = {
   equipEdit:           ['equipment_edit',        ['p_token','p_item','p_size','p_qty']],
   equipDelete:         ['equipment_delete',      ['p_token','p_item']],
   equipUnsign:         ['equipment_unsign',      ['p_token','p_item']],
-  equipReturn:         ['equipment_return',      ['p_token','p_item']]
+  equipReturn:         ['equipment_return',      ['p_token','p_item']],
+  equipOpenOrders:     ['equipment_open_orders', ['p_token']]
 };
 
 function callServer(action){
@@ -1280,7 +1282,8 @@ function paintCommander(d){
     cmdState.data=d;
     var p=App.profile;
     var canFuture = (p.role === 'ראש צוות' || p.role === 'מפקד שלוחה');
-    var bar = (p.canGenerate || canFuture)
+    var eqOn = !!d.equipmentVisible;
+    var bar = (p.canGenerate || canFuture || eqOn)
       ? '<div class="toolbar">'
         + (p.canGenerate ? '<button class="btn gold" id="genBtn">הפקת דוח להיום</button>' : '')
         + (p.canSeeAll ? '<button class="btn ghost" id="dashBtn">מבט שלוחה</button>' : '')
@@ -1288,6 +1291,7 @@ function paintCommander(d){
         + '<button class="btn ghost" id="bulkBtn">דיווח גורף</button>'
         + (canFuture ? '<button class="btn ghost" id="lockBtn">'+((d.dayLock&&d.dayLock.locked)?'ביטול נעילת היום':'נעילת היום')+'</button>' : '')
         + (canFuture ? '<button class="btn ghost" id="manageBtn">ניהול שוחרים</button>' : '')
+        + (eqOn ? '<button class="btn ghost" id="ordersBtn">תכלול הזמנות</button>' : '')
         + '</div>'
       : '';
     if(!d.classes.length){
@@ -1314,6 +1318,7 @@ function bindCmdTop(){
   });
   if(el('bulkBtn')) el('bulkBtn').addEventListener('click', openBulk);
   if(el('manageBtn')) el('manageBtn').addEventListener('click', openManage);
+  if(el('ordersBtn')) el('ordersBtn').addEventListener('click', function(){ downloadOrdersExcel(el('ordersBtn')); });
   if(el('lockBtn')) el('lockBtn').addEventListener('click', function(){
     var locked = !!(cmdState.data && cmdState.data.dayLock && cmdState.data.dayLock.locked);
     if(locked){ callServer('setDayLock', App.token, App.date, false, '').then(function(){ toast('נעילת היום בוטלה'); renderCommander(); }).catch(function(e){toast(e.message,true);}); }
@@ -1453,7 +1458,7 @@ function renderClassPane(){
   el('classPane').innerHTML =
     '<div class="panel"><div class="head">'
     + '<div><h2>כיתה '+esc(c.cls)+'</h2><div class="sub" style="margin-top:6px">'+classSummary(c)+'</div>'
-      + ((cmdState.data && cmdState.data.equipmentVisible) ? '<button class="btn ghost sm" id="eqClassBtn" style="margin-top:8px">אפסנאות הכיתה</button>' : '') + '</div>'
+      + '</div>'
     + cutoffCtl + '</div>'
     + '<div class="body" style="padding:16px 24px;border-bottom:1px solid var(--line-2)">'
     + '<input id="searchInp" placeholder="חיפוש שוחר בשם" value="'+esc(filterText)+'" style="max-width:320px">'
@@ -1539,7 +1544,6 @@ function renderClassPane(){
       });
       recount(c); renderTabs(); renderClassPane();
     });
-    if(el('eqClassBtn')) el('eqClassBtn').addEventListener('click', function(){ openEquipClass(c.cls); });
     el('cutoffBtn').addEventListener('click', function(){
       var prev = c.cutoff, next = el('cutoffInp').value;
       c.cutoff = next;
@@ -1859,33 +1863,101 @@ function grabFile(fmt, btn){
   } catch(e){ toast('הפקת האקסל נכשלה', true); }
 }
 
-/* בונה חוברת אקסל עם שני גיליונות: נעדרים ומאחרים */
+/* אקסל נוכחות מעוצב, קרוב לטופס, באמצעות ExcelJS */
 function exportExcel_(data){
-  var wb = XLSX.utils.book_new();
-  function sheetFor(kind){
+  var wb = new ExcelJS.Workbook();
+  var navy = 'FF0B3D66', head = 'FFEAF4FB', line = 'FFB9C8D6';
+  var border = { top:{style:'thin',color:{argb:line}}, left:{style:'thin',color:{argb:line}},
+                 bottom:{style:'thin',color:{argb:line}}, right:{style:'thin',color:{argb:line}} };
+  function buildSheet(kind){
+    var title = kind==='absent' ? 'דוח נעדרים יומי' : 'דוח מאחרים יומי';
     var namesH = kind==='absent' ? 'שמות נעדרים' : 'שמות מאחרים';
     var reasonH = kind==='absent' ? 'סיבת ההיעדרות' : 'סיבת האיחור';
     var cntH = kind==='absent' ? 'נעדרים' : 'מאחרים';
-    var aoa = [['כיתה','מצבת חניכים','חניכים נוכחים',cntH,namesH,reasonH,'סה"כ ימים']];
+    var ws = wb.addWorksheet(kind==='absent'?'נעדרים':'מאחרים', { views:[{rightToLeft:true}] });
+    ws.columns = [{width:9},{width:13},{width:14},{width:10},{width:26},{width:30},{width:10}];
+    // כותרת ראשית
+    ws.mergeCells(1,1,1,7);
+    var tc = ws.getCell(1,1); tc.value = title + '   ' + shortDate(data.date);
+    tc.font = { bold:true, size:16, color:{argb:navy} }; tc.alignment = { horizontal:'center', vertical:'middle' };
+    ws.getRow(1).height = 28;
+    // כותרות עמודות
+    var hdr = ['כיתה','מצבת חניכים','חניכים נוכחים',cntH,namesH,reasonH,'סה"כ ימים'];
+    var hr = ws.addRow(hdr); hr.height = 22;
+    hr.eachCell(function(c){ c.font={bold:true,color:{argb:'FFFFFFFF'}}; c.fill={type:'pattern',pattern:'solid',fgColor:{argb:navy}};
+      c.alignment={horizontal:'center',vertical:'middle'}; c.border=border; });
+    // גוף, מיזוג התאים המשותפים לכל כיתה
     data.blocks.forEach(function(b){
       var list = kind==='absent' ? b.absentList : b.lateList;
       var cnt  = kind==='absent' ? b.absentCount : b.lateCount;
       var n = Math.max(1, list.length);
+      var startRow = ws.rowCount + 1;
       for(var i=0;i<n;i++){
         var it = list[i];
-        aoa.push([ i===0?b.cls:'', i===0?b.matzevet:'', i===0?b.presentCount:'', i===0?cnt:'',
-          it?((i+1)+'. '+it.name):'', it?it.reason:'', it?it.days:'' ]);
+        ws.addRow(['','','','', it?((i+1)+'. '+it.name):'', it?it.reason:'', it?it.days:'' ]);
       }
+      var endRow = ws.rowCount;
+      // ערכי הכיתה הממוזגים
+      [[1,b.cls],[2,b.matzevet],[3,b.presentCount],[4,cnt]].forEach(function(pair){
+        if(endRow>startRow) ws.mergeCells(startRow,pair[0],endRow,pair[0]);
+        var c = ws.getCell(startRow,pair[0]); c.value = pair[1];
+        c.alignment={horizontal:'center',vertical:'middle'}; c.font={bold:true};
+      });
+      // גבולות ויישור לכל התאים בטווח
+      for(var r=startRow;r<=endRow;r++){ for(var col=1;col<=7;col++){ var cc=ws.getCell(r,col); cc.border=border;
+        if(col>=5) cc.alignment={horizontal:(col===7?'center':'right'),vertical:'middle'}; } }
     });
-    var ws = XLSX.utils.aoa_to_sheet(aoa);
-    if(!ws['!cols']) ws['!cols'] = [{wch:8},{wch:12},{wch:14},{wch:10},{wch:22},{wch:26},{wch:10}];
-    return ws;
   }
-  XLSX.utils.book_append_sheet(wb, sheetFor('absent'), 'נעדרים');
-  XLSX.utils.book_append_sheet(wb, sheetFor('late'), 'מאחרים');
-  XLSX.writeFile(wb, 'דוח אחד ' + shortDate(data.date) + '.xlsx');
+  buildSheet('absent'); buildSheet('late');
+  wb.xlsx.writeBuffer().then(function(buf){
+    var blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    var url = URL.createObjectURL(blob); var a=document.createElement('a');
+    a.href=url; a.download='דוח אחד '+shortDate(data.date)+'.xlsx'; document.body.appendChild(a); a.click();
+    setTimeout(function(){ a.remove(); URL.revokeObjectURL(url); }, 1500);
+  }).catch(function(){ toast('הפקת האקסל נכשלה', true); });
 }
 
+/* אקסל תכלול הזמנות אפסנאות פתוחות: גיליון סיכום וגיליון לפי כיתה */
+function exportOrdersExcel(d){
+  var wb = new ExcelJS.Workbook();
+  var navy='FF0B3D66', line='FFB9C8D6';
+  var border={ top:{style:'thin',color:{argb:line}}, left:{style:'thin',color:{argb:line}},
+               bottom:{style:'thin',color:{argb:line}}, right:{style:'thin',color:{argb:line}} };
+  function styleHead(row,navyBg){ row.eachCell(function(c){ c.font={bold:true,color:{argb:navyBg?'FFFFFFFF':navy}};
+    if(navyBg) c.fill={type:'pattern',pattern:'solid',fgColor:{argb:navy}}; c.alignment={horizontal:'center',vertical:'middle'}; c.border=border; }); }
+
+  // גיליון 1: סיכום כמויות
+  var s1 = wb.addWorksheet('סיכום כמויות', { views:[{rightToLeft:true}] });
+  s1.columns=[{width:22},{width:16},{width:12}];
+  s1.mergeCells(1,1,1,3); var t1=s1.getCell(1,1); t1.value='תכלול הזמנות פתוחות   '+d.generatedAt;
+  t1.font={bold:true,size:15,color:{argb:navy}}; t1.alignment={horizontal:'center'}; s1.getRow(1).height=26;
+  styleHead(s1.addRow(['מוצר','מידה','כמות']), true);
+  (d.totals||[]).forEach(function(t){ var r=s1.addRow([t.product, t.size, t.qty]); r.eachCell(function(c){ c.border=border; c.alignment={horizontal:'center'}; }); });
+  if(!(d.totals||[]).length) s1.addRow(['אין הזמנות פתוחות','','']);
+
+  // גיליון 2: לפי כיתה
+  var s2 = wb.addWorksheet('לפי כיתה', { views:[{rightToLeft:true}] });
+  s2.columns=[{width:22},{width:18},{width:12},{width:10},{width:14}];
+  (d.byClass||[]).forEach(function(g){
+    s2.mergeCells(s2.rowCount+1,1,s2.rowCount+1,5);
+    var cr=s2.getCell(s2.rowCount,1); cr.value='כיתה '+g.cls; cr.font={bold:true,size:13,color:{argb:'FFFFFFFF'}};
+    cr.fill={type:'pattern',pattern:'solid',fgColor:{argb:navy}}; cr.alignment={horizontal:'center'};
+    styleHead(s2.addRow(['שם המזמין','מוצר','מידה','כמות','תאריך הזמנה']), false);
+    (g.rows||[]).forEach(function(row){ var r=s2.addRow([row.name,row.product,row.size,row.qty,row.date]);
+      r.eachCell(function(c){ c.border=border; c.alignment={horizontal:'center'}; }); });
+    s2.addRow([]);
+  });
+  if(!(d.byClass||[]).length) s2.addRow(['אין הזמנות פתוחות']);
+
+  wb.xlsx.writeBuffer().then(function(buf){
+    var blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    var url=URL.createObjectURL(blob); var a=document.createElement('a');
+    a.href=url; a.download='תכלול הזמנות אפסנאות.xlsx'; document.body.appendChild(a); a.click();
+    setTimeout(function(){ a.remove(); URL.revokeObjectURL(url); }, 1500);
+  }).catch(function(){ toast('הפקת האקסל נכשלה', true); });
+}
+
+/* תצוגה על המסך, לבדיקה בלבד */
 /* תצוגה על המסך, לבדיקה בלבד */
 function reportDoc(data, kind){
   var title = kind==='absent' ? 'דוח נעדרים יומי' : 'דוח מאחרים יומי';
@@ -2326,7 +2398,8 @@ function openDashboard(id){
       + '<div class="dhead"><div><div class="dname">'+esc(d.name)+'</div>'
       +   '<div class="dmeta">כיתה '+esc(d.cls)+'</div>'
       +   '<div class="dmeta" style="margin-top:2px">'+idLine+'</div></div>'
-      +   '<div style="display:flex;gap:8px"><button class="btn ghost sm" id="dLog">יומן חודשי</button>'
+      +   '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost sm" id="dLog">יומן חודשי</button>'
+      +   ((cmdState.data && cmdState.data.equipmentVisible) ? '<button class="btn ghost sm" id="dEquip">אפסנאות</button>' : '')
       +   '<button class="btn ghost sm" id="dClose">סגירה</button></div></div>'
       + '<div class="m-body">'
       +   '<div class="dgrid">'
@@ -2346,6 +2419,7 @@ function openDashboard(id){
       + '</div></div></div>';
     el('dClose').addEventListener('click', closeModal);
     if(el('dLog')) el('dLog').addEventListener('click', function(){ openMonthLog(d.id, true); });
+    if(el('dEquip')) el('dEquip').addEventListener('click', function(){ openEquipStudent(d.cls, d.id, d.name); });
     el('dbg').addEventListener('click', function(e){ if(e.target===el('dbg')) closeModal(); });
   }).catch(function(e){ closeModal(); toast(e.message, true); });
 }
@@ -2497,7 +2571,7 @@ function equipEditForm(id, prodKey, size, qty, ret){
     el('eeSave').addEventListener('click', function(){
       var sz=el('eeSize')?el('eeSize').value:'', q=+el('eeQty').value||1;
       var btn=el('eeSave'); btn.disabled=true; btn.textContent='שומר';
-      callServer('equipEdit', App.token, +id, sz, q).then(function(){ toast('הפריט עודכן'); close(); if(ret==='mine') openEquipMine(); else openEquipClass(ret); })
+      callServer('equipEdit', App.token, +id, sz, q).then(function(){ toast('הפריט עודכן'); close(); if(ret==='mine') openEquipMine(); else if(ret && ret.reopen) ret.reopen(); else openEquipClass(ret); })
         .catch(function(e){ btn.disabled=false; btn.textContent='שמירה'; toast(e.message,true); });
     });
   });
@@ -2558,11 +2632,57 @@ function drawEquipClass(cls, items){
   host.querySelectorAll('.ec-del').forEach(function(b){ b.addEventListener('click', function(){ ecDo(b, 'equipDelete', [+b.getAttribute('data-id')], cls); }); });
   host.querySelectorAll('.ec-edit').forEach(function(b){ b.addEventListener('click', function(){ equipEditForm(b.getAttribute('data-id'), b.getAttribute('data-p'), b.getAttribute('data-s'), +b.getAttribute('data-q'), cls); }); });
 }
-function ecDo(btn, action, args, cls){
+function ecDo(btn, action, args, cls, reopen){
   btn.disabled=true;
-  callServer.apply(null,[action, App.token].concat(args)).then(function(){ toast('בוצע'); openEquipClass(cls); }).catch(function(e){ btn.disabled=false; toast(e.message,true); });
+  callServer.apply(null,[action, App.token].concat(args)).then(function(){ toast('בוצע'); if(reopen) reopen(); else openEquipClass(cls); }).catch(function(e){ btn.disabled=false; toast(e.message,true); });
 }
-function equipIssueForm(cls, preId){
+function openEquipStudent(cls, sid, name){
+  var host=el('modalHost');
+  host.innerHTML='<div class="eqscreen" id="eqScreen"><div class="eqbody center" style="padding-top:80px">'+spinner()+'</div></div>';
+  callServer('equipClass', App.token, cls).then(function(d){ loadCatalog(function(){ drawEquipStudent(cls, sid, name, (d.items||[]).filter(function(it){return it.studentId===sid;})); }); })
+    .catch(function(e){ closeModal(); toast(e.message, true); });
+}
+function drawEquipStudent(cls, sid, name, items){
+  var sum=eqSummary(items), done=0;
+  var grid=EQ_TEMPLATE.map(function(t){ var m=sum[t.key], stt=eqProdState(m); if(stt.cls==='d-present') done++;
+    return '<div class="eq-cell"><span class="eq-cn">'+esc(t.name)+'</span><span class="eqbadge '+stt.cls+'">'+esc(stt.label)+'</span></div>'; }).join('');
+  var actRows=items.filter(function(it){return it.status!=='returned';}).map(function(it){
+    var line=esc(it.product)+(it.size?(' '+esc(it.size)):'')+(it.quantity>1?(' x'+it.quantity):'');
+    var btns='';
+    if(it.status==='pending') btns+='<button class="btn gold xs ec-act" data-id="'+it.id+'" data-a="approve">אישור</button>';
+    if(it.status==='ordered'||it.status==='approved') btns+='<button class="btn gold xs ec-act" data-id="'+it.id+'" data-a="ready">פתיחה לחתימה</button>';
+    if(it.status==='ready') btns+='<span class="eq-wait">ממתין לחתימה</span>';
+    if(it.status==='received') btns+='<button class="btn slim xs ec-unsign" data-id="'+it.id+'">ביטול חתימה</button><button class="btn ghost xs ec-return" data-id="'+it.id+'">החזרה</button>';
+    if(it.status!=='received') btns+='<button class="btn slim xs ec-edit" data-id="'+it.id+'" data-p="'+esc(it.productKey)+'" data-s="'+esc(it.size)+'" data-q="'+it.quantity+'">עריכה</button><button class="btn ghost xs ec-del" data-id="'+it.id+'">מחיקה</button>';
+    return '<div class="eq-actrow"><span>'+line+' '+eqActChip(it)+'</span><span class="eqc-actbtns">'+btns+'</span></div>';
+  }).join('');
+  var retN=items.filter(function(it){return it.status==='returned';}).length;
+  var retLine=retN?('<div class="eq-actrow muted"><span>הוחזרו '+retN+' פריטים</span></div>'):'';
+  var body='<div class="eq-scard"><div class="eq-shead"><span class="eq-sname">'+esc(name)+'</span>'
+    + '<span class="eq-sprog">'+done+' / '+EQ_TEMPLATE.length+'</span>'
+    + '<button class="btn slim xs" id="esIssue">הנפקה</button></div>'
+    + '<div class="eq-grid">'+grid+'</div>'
+    + ((actRows||retLine)?('<div class="eq-acts">'+actRows+retLine+'</div>'):'')
+    + '</div>';
+  el('modalHost').innerHTML = eqScreen('אפסנאות | '+name, 'כיתה '+cls, body);
+  el('eqBack').addEventListener('click', function(){ openDashboard(sid); });
+  var host=el('modalHost'); var reopen=function(){ openEquipStudent(cls, sid, name); };
+  el('esIssue').addEventListener('click', function(){ equipIssueForm(cls, sid, reopen); });
+  host.querySelectorAll('.ec-act').forEach(function(b){ b.addEventListener('click', function(){ ecDo(b,'equipAdvance',[+b.getAttribute('data-id'),b.getAttribute('data-a')], null, reopen); }); });
+  host.querySelectorAll('.ec-unsign').forEach(function(b){ b.addEventListener('click', function(){ ecDo(b,'equipUnsign',[+b.getAttribute('data-id')], null, reopen); }); });
+  host.querySelectorAll('.ec-return').forEach(function(b){ b.addEventListener('click', function(){ if(confirm('להחזיר את הפריט? הוא לא ייספר בסך הכולל')) ecDo(b,'equipReturn',[+b.getAttribute('data-id')], null, reopen); }); });
+  host.querySelectorAll('.ec-del').forEach(function(b){ b.addEventListener('click', function(){ ecDo(b,'equipDelete',[+b.getAttribute('data-id')], null, reopen); }); });
+  host.querySelectorAll('.ec-edit').forEach(function(b){ b.addEventListener('click', function(){ equipEditForm(b.getAttribute('data-id'), b.getAttribute('data-p'), b.getAttribute('data-s'), +b.getAttribute('data-q'), {reopen:reopen}); }); });
+}
+
+/* הורדת אקסל תכלול הזמנות פתוחות */
+function downloadOrdersExcel(btn){
+  if(btn){ btn.disabled=true; btn.textContent='מכין'; }
+  callServer('equipOpenOrders', App.token).then(function(d){ exportOrdersExcel(d); if(btn){ btn.disabled=false; btn.textContent='תכלול הזמנות'; } })
+    .catch(function(e){ if(btn){ btn.disabled=false; btn.textContent='תכלול הזמנות'; } toast(e.message,true); });
+}
+
+function equipIssueForm(cls, preId, reopen){
   loadCatalog(function(cat){
     var studs=(cmdState.data && cmdState.data.classes||[]).filter(function(c){return c.cls===cls;})[0];
     var list=studs?studs.students:[];
@@ -2582,7 +2702,7 @@ function equipIssueForm(cls, preId){
       var sid=el('eiStud').value, prod=el('eiProd').value, size=el('eiSize')?el('eiSize').value:'', qty=+el('eiQty').value||1;
       if(!sid){ toast('יש לבחור שוחר', true); return; }
       var btn=el('eiSave'); btn.disabled=true; btn.textContent='מנפיק';
-      callServer('equipIssue', App.token, sid, prod, size, qty).then(function(){ toast('הפריט הונפק ופתוח לחתימה'); close(); openEquipClass(cls); })
+      callServer('equipIssue', App.token, sid, prod, size, qty).then(function(){ toast('הפריט הונפק ופתוח לחתימה'); close(); if(reopen) reopen(); else openEquipClass(cls); })
         .catch(function(e){ btn.disabled=false; btn.textContent='הנפקה'; toast(e.message,true); });
     });
   });
