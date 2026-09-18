@@ -412,6 +412,10 @@
   .eq-actions-bar{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px;}
   /* כרטיסי מוצר לשוחר */
   .eqgrid{display:grid; grid-template-columns:repeat(3,1fr); gap:14px;}
+  .eqgrid-inline{grid-template-columns:repeat(3,1fr);}
+  @media(max-width:900px){ .eqgrid-inline{grid-template-columns:repeat(2,1fr);} }
+  @media(max-width:560px){ .eqgrid-inline{grid-template-columns:1fr;} }
+  .eq-inline .head{display:flex;align-items:center;justify-content:space-between;}
   @media(max-width:900px){ .eqgrid{grid-template-columns:repeat(2,1fr);} }
   @media(max-width:600px){ .eqgrid{grid-template-columns:1fr;} }
   .eqc{background:#fff; border:1px solid var(--line); border-radius:14px; padding:16px; box-shadow:0 1px 3px rgba(11,61,102,.05);}
@@ -1095,14 +1099,13 @@ function infoStrip(d){
   }
 
   var strip = cards.length ? '<div class="info-strip">'+cards.join('')+'</div>' : '';
-  strip += '<div style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" id="myLogBtn">יומן חודשי</button>'
-    + (d.equipmentVisible ? '<button class="btn ghost" id="myEquipBtn">אפסנאות</button>' : '') + '</div>';
+  strip += '<div style="margin-bottom:16px"><button class="btn ghost" id="myLogBtn">יומן חודשי</button></div>';
   return strip;
 }
 
 function bindMyLog_(){
   if(el('myLogBtn')) el('myLogBtn').addEventListener('click', function(){ openMonthLog(null, false); });
-  if(el('myEquipBtn')) el('myEquipBtn').addEventListener('click', openEquipMine);
+  if(stu.day && stu.day.equipmentVisible) renderMyEquipInline();
 }
 function drawStudent(){
   var d = stu.day;
@@ -1117,7 +1120,7 @@ function drawStudent(){
       + '<div class="verdict wait" style="border-top-color:var(--slate)">'
       + '<div class="v-head"><div class="v-ic" style="background:var(--sky-soft);color:var(--navy)">'+ic('ban')+'</div>'
       + '<div><div class="v-ttl">'+esc(d.dayLock.message||'אין דיווח היום')+'</div>'
-      + '<div class="v-sub">היום נעול לדיווח על ידי הפיקוד</div></div></div></div></div>';
+      + '<div class="v-sub">היום נעול לדיווח על ידי הפיקוד</div></div></div>'+eqInlineHost()+'</div>';
     bindMyLog_();
     return;
   }
@@ -1126,7 +1129,7 @@ function drawStudent(){
     var future = (stuDate && stuDate !== App.date);
   var dayTabsHtml = '<div class="daytabs" id="dayTabs"></div>';
   var futureBadge = future ? '<div class="banner warn">זהו דיווח עתידי לתאריך '+esc(shortDate(stuDate))+'. ניתן לעדכן אותו עד אותו היום.</div>' : '';
-  el('view').innerHTML = '<div class="fade">'+bd+dayTabsHtml+futureBadge+heroBlock(d)+verdictBlock(d)+tipsBlock()+'</div>';
+  el('view').innerHTML = '<div class="fade">'+bd+dayTabsHtml+futureBadge+heroBlock(d)+verdictBlock(d)+tipsBlock()+eqInlineHost()+'</div>';
     bindMyLog_();
     return;
   }
@@ -1182,6 +1185,7 @@ function drawStudent(){
     +   '<span class="note" id="saveNote">'+(stu.saving?'שומר':'')+'</span></div>'
     + '</div>'
     + tipsBlock()
+    + eqInlineHost()
     + '</div>';
 
   drawDayTabs();
@@ -2484,16 +2488,24 @@ function eqScreen(title, sub, bodyHtml){
     + '<div class="eqbody"><div class="eqbody-in">'+bodyHtml+'</div></div></div>';
 }
 
-/* ---------- צד השוחר ---------- */
-function openEquipMine(){
-  var host=el('modalHost');
-  host.innerHTML='<div class="eqscreen" id="eqScreen"><div class="eqbody center" style="padding-top:80px">'+spinner()+'</div></div>';
-  callServer('equipMine', App.token).then(function(d){
-    if(!d.visible){ closeModal(); toast('רובריקת האפסנאות אינה פתוחה כרגע', true); return; }
-    loadCatalog(function(){ drawEquipMine(d.items||[]); });
-  }).catch(function(e){ closeModal(); toast(e.message, true); });
+/* ---------- צד השוחר, בתוך האזור האישי ---------- */
+function eqInlineHost(){
+  if(!(stu.day && stu.day.equipmentVisible)) return '';
+  return '<div class="panel eq-inline" id="myEquip" style="margin-top:18px"><div class="head"><h2>האפסנאות שלי</h2>'
+    + '<span class="sub" id="myEquipSub"></span></div>'
+    + '<div class="body" id="myEquipBody">'+spinner()+'</div></div>';
 }
-function drawEquipMine(items){
+function renderMyEquipInline(){
+  var host = el('myEquipBody'); if(!host) return;
+  loadCatalog(function(){
+    callServer('equipMine', App.token).then(function(d){
+      if(!d.visible){ var pnl=el('myEquip'); if(pnl) pnl.style.display='none'; return; }
+      drawMyEquipInline(d.items||[]);
+    }).catch(function(e){ host.innerHTML='<div class="muted">לא ניתן לטעון אפסנאות כרגע</div>'; });
+  });
+}
+function drawMyEquipInline(items){
+  var host = el('myEquipBody'); if(!host) return;
   var sum=eqSummary(items), done=0;
   var keys=EQ_TEMPLATE.map(function(t){return t.key;});
   Object.keys(sum).forEach(function(k){ if(keys.indexOf(k)<0) keys.push(k); });
@@ -2514,30 +2526,23 @@ function drawEquipMine(items){
       + (m.t.req>0?'<div class="eqc-line muted">נדרש '+m.t.req+'</div>':'')
       + sizesTxt + ret + (acts?('<div class="eqc-acts">'+acts+'</div>'):'') + '</div>';
   }).join('');
-  var body='<div class="eq-actions-bar"><button class="btn gold" id="eqDeclare">חתימה על ציוד קיים</button>'
+  host.innerHTML='<div class="eq-actions-bar"><button class="btn gold" id="eqDeclare">חתימה על ציוד קיים</button>'
     + '<button class="btn ghost" id="eqOrder">הזמנת פריט</button></div>'
-    + '<div class="eqgrid">'+cards+'</div>';
-  el('modalHost').innerHTML = eqScreen('האפסנאות שלי', 'הושלמו '+done+' מתוך '+EQ_TEMPLATE.length+' פריטים', body);
-  el('eqBack').addEventListener('click', closeModal);
+    + '<div class="eqgrid eqgrid-inline">'+cards+'</div>';
+  var sub=el('myEquipSub'); if(sub) sub.textContent='הושלמו '+done+' מתוך '+EQ_TEMPLATE.length+' פריטים';
   el('eqDeclare').addEventListener('click', function(){ equipForm('declare'); });
   el('eqOrder').addEventListener('click', function(){ equipForm('order'); });
-  bindEqMineActs();
-}
-function bindEqMineActs(){
-  var host=el('modalHost');
   host.querySelectorAll('.eqm-sign').forEach(function(b){ b.addEventListener('click', function(){
-    b.disabled=true; callServer('equipSign', App.token, +b.getAttribute('data-id')).then(function(){ toast('קבלת הציוד אושרה'); openEquipMine(); }).catch(function(e){ b.disabled=false; toast(e.message,true); }); }); });
+    b.disabled=true; callServer('equipSign', App.token, +b.getAttribute('data-id')).then(function(){ toast('קבלת הציוד אושרה'); renderMyEquipInline(); }).catch(function(e){ b.disabled=false; toast(e.message,true); }); }); });
   host.querySelectorAll('.eqm-del').forEach(function(b){ b.addEventListener('click', function(){
-    b.disabled=true; callServer('equipDelete', App.token, +b.getAttribute('data-id')).then(function(){ toast('הפריט בוטל'); openEquipMine(); }).catch(function(e){ b.disabled=false; toast(e.message,true); }); }); });
+    b.disabled=true; callServer('equipDelete', App.token, +b.getAttribute('data-id')).then(function(){ toast('הפריט בוטל'); renderMyEquipInline(); }).catch(function(e){ b.disabled=false; toast(e.message,true); }); }); });
   host.querySelectorAll('.eqm-edit').forEach(function(b){ b.addEventListener('click', function(){
     equipEditForm(b.getAttribute('data-id'), b.getAttribute('data-p'), b.getAttribute('data-s'), +b.getAttribute('data-q'), 'mine'); }); });
 }
 function equipForm(mode){
   loadCatalog(function(cat){
-    var host=el('modalHost');
-    var title=mode==='declare'?'חתימה על ציוד קיים בבית':'הזמנת פריט';
-    host.querySelector('.eqbody-in').insertAdjacentHTML('afterbegin','');
     var wrap=document.createElement('div'); wrap.className='modal-bg'; wrap.id='efbg';
+    var title=mode==='declare'?'חתימה על ציוד קיים בבית':'הזמנת פריט';
     wrap.innerHTML='<div class="modal"><div class="m-body"><h3>'+title+'</h3>'
       + '<label>מוצר</label>'+productSelectHtml(cat,'efProd')
       + '<div id="efSizeWrap"></div>'
@@ -2552,7 +2557,7 @@ function equipForm(mode){
       var prod=el('efProd').value, size=el('efSize')?el('efSize').value:'', qty=+el('efQty').value||1;
       var btn=el('efSave'); btn.disabled=true; btn.textContent='שומר';
       callServer(mode==='declare'?'equipDeclare':'equipOrder', App.token, prod, size, qty)
-        .then(function(){ toast(mode==='declare'?'נשלח לאישור המקס':'ההזמנה נקלטה'); close(); openEquipMine(); })
+        .then(function(){ toast(mode==='declare'?'נשלח לאישור המקס':'ההזמנה נקלטה'); close(); renderMyEquipInline(); })
         .catch(function(e){ btn.disabled=false; btn.textContent='שמירה'; toast(e.message,true); });
     });
   });
@@ -2571,13 +2576,14 @@ function equipEditForm(id, prodKey, size, qty, ret){
     el('eeSave').addEventListener('click', function(){
       var sz=el('eeSize')?el('eeSize').value:'', q=+el('eeQty').value||1;
       var btn=el('eeSave'); btn.disabled=true; btn.textContent='שומר';
-      callServer('equipEdit', App.token, +id, sz, q).then(function(){ toast('הפריט עודכן'); close(); if(ret==='mine') openEquipMine(); else if(ret && ret.reopen) ret.reopen(); else openEquipClass(ret); })
+      callServer('equipEdit', App.token, +id, sz, q).then(function(){ toast('הפריט עודכן'); close();
+        if(ret==='mine') renderMyEquipInline(); else if(ret && ret.reopen) ret.reopen(); else openEquipClass(ret); })
         .catch(function(e){ btn.disabled=false; btn.textContent='שמירה'; toast(e.message,true); });
     });
   });
 }
 
-/* ---------- צד המקס ---------- */
+/* ---------- צד המקס ---------- *//* ---------- צד המקס ---------- */
 function openEquipClass(cls){
   var host=el('modalHost');
   host.innerHTML='<div class="eqscreen" id="eqScreen"><div class="eqbody center" style="padding-top:80px">'+spinner()+'</div></div>';
