@@ -1103,13 +1103,19 @@ function infoStrip(d){
   }
 
   var strip = cards.length ? '<div class="info-strip">'+cards.join('')+'</div>' : '';
-  strip += '<div style="margin-bottom:16px"><button class="btn ghost" id="myLogBtn">יומן חודשי</button></div>';
+  strip += '<div style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" id="myLogBtn">יומן חודשי</button>'
+    + (d.equipmentVisible ? '<button class="btn ghost" id="myEquipBtn">אפסנאות</button>' : '') + '</div>';
   return strip;
 }
 
 function bindMyLog_(){
   if(el('myLogBtn')) el('myLogBtn').addEventListener('click', function(){ openMonthLog(null, false); });
-  if(stu.day && stu.day.equipmentVisible) renderMyEquipInline();
+  if(el('myEquipBtn')) el('myEquipBtn').addEventListener('click', toggleMyEquip);
+}
+function toggleMyEquip(){
+  var pnl=el('myEquip'); if(!pnl) return;
+  if(pnl.style.display==='none'){ pnl.style.display=''; renderMyEquipInline(); pnl.scrollIntoView({behavior:'smooth', block:'start'}); }
+  else { pnl.style.display='none'; }
 }
 function drawStudent(){
   var d = stu.day;
@@ -2495,7 +2501,7 @@ function eqScreen(title, sub, bodyHtml){
 /* ---------- צד השוחר, בתוך האזור האישי ---------- */
 function eqInlineHost(){
   if(!(stu.day && stu.day.equipmentVisible)) return '';
-  return '<div class="panel eq-inline" id="myEquip" style="margin-top:18px"><div class="head"><h2>האפסנאות שלי</h2>'
+  return '<div class="panel eq-inline" id="myEquip" style="margin-top:18px;display:none"><div class="head"><h2>האפסנאות שלי</h2>'
     + '<span class="sub" id="myEquipSub"></span></div>'
     + '<div class="body" id="myEquipBody">'+spinner()+'</div></div>';
 }
