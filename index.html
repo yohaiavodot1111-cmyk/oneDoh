@@ -788,7 +788,7 @@ var RPC_MAP = {
   equipReturn:         ['equipment_return',      ['p_token','p_item']],
   equipOpenOrders:     ['equipment_open_orders', ['p_token']],
   dashboardData:       ['dashboard_data',        ['p_token','p_date']],
-  setCheckoutEnabled:  ['set_checkout_enabled',  ['p_token','p_on']],
+  setCheckoutEnabled:  ['set_checkout_enabled',  ['p_token','p_class','p_on']],
   studentCheckout:     ['student_checkout',      ['p_token']],
   approveCheckouts:    ['commander_approve_checkouts', ['p_token','p_ids']]
 };
@@ -964,9 +964,7 @@ window.addEventListener('beforeunload', function(e){
 
 function isDesktop_(){ return window.matchMedia('(min-width:900px)').matches; }
 function route(fromCache){
-  if(App.profile.kind==='student') return renderStudent(fromCache);
-  if(isDesktop_() && App.cmdView!=='reports') return renderDashboard();
-  return renderCommander(fromCache);
+  return App.profile.kind==='student' ? renderStudent(fromCache) : renderCommander(fromCache);
 }
 
 function sessionExpired_(msg){
@@ -1484,126 +1482,6 @@ function nowHM(){
 
 /* ============ מסך מפקד ============ */
 var cmdState={data:null, active:0};
-var dashTick=null;
-function openReportsUI(){ App.cmdView='reports'; renderCommander(); }
-function backToDashboard(){ App.cmdView='dashboard'; renderDashboard(); }
-
-function renderDashboard(){
-  el('view').innerHTML = '<div class="dash"><div class="dash-load">'+spinner()+'</div></div>';
-  callServer('dashboardData', App.token, App.date).then(function(d){
-    App.dashData=d; paintDashboard(d);
-  }).catch(function(e){
-    if(isAuthError_(e.message)) return sessionExpired_('החיבור פג, יש להתחבר שוב');
-    el('view').innerHTML='<div class="panel"><div class="body">לא ניתן לטעון את הדאשבורד כרגע</div></div>';
-    toast(e.message,true);
-  });
-}
-
-function nowClock_(){ var d=new Date(),p=function(n){return (n<10?'0':'')+n;}; return p(d.getHours())+':'+p(d.getMinutes()); }
-
-function dashTile(label, value, sub, tone){
-  return '<div class="dtile '+(tone||'')+'"><div class="dtile-v">'+value+'</div>'
-    + '<div class="dtile-l">'+esc(label)+'</div>'+(sub?('<div class="dtile-s">'+sub+'</div>'):'')+'</div>';
-}
-
-function dashBar(perClass){
-  if(!perClass.length) return '';
-  var bars = perClass.map(function(c){
-    var h = Math.max(2, c.pct);
-    return '<div class="bar-col"><div class="bar-val">'+c.pct+'%</div>'
-      + '<div class="bar-track"><div class="bar-fill" style="height:'+h+'%"></div></div>'
-      + '<div class="bar-x">'+esc(c.cls)+'</div></div>';
-  }).join('');
-  return '<div class="dcard"><div class="dcard-h">אחוז נוכחות לפי כיתה</div><div class="barchart">'+bars+'</div></div>';
-}
-
-function dashDonut(t){
-  var segs=[
-    {label:'נוכחים', val:t.present, color:'var(--present)'},
-    {label:'מאחרים', val:t.late, color:'var(--late)'},
-    {label:'נעדרים', val:t.absent - t.noReport, color:'var(--absent)'},
-    {label:'לא דיווחו', val:t.noReport, color:'#94A3B8'},
-    {label:'בחופשה', val:t.onLeave, color:'#B9C8D6'}
-  ];
-  var tot=segs.reduce(function(a,x){return a+Math.max(0,x.val);},0) || 1;
-  var acc=0, R=52, C=2*Math.PI*R, parts='';
-  segs.forEach(function(sg){
-    var v=Math.max(0,sg.val); if(v<=0) return;
-    var len=C*v/tot, off=C*acc/tot;
-    parts += '<circle cx="60" cy="60" r="'+R+'" fill="none" stroke="'+sg.color+'" stroke-width="16" '
-      + 'stroke-dasharray="'+len+' '+(C-len)+'" stroke-dashoffset="'+(-off)+'" transform="rotate(-90 60 60)"/>';
-    acc+=v;
-  });
-  var legend=segs.map(function(sg){
-    var pct = Math.round(Math.max(0,sg.val)*100/tot);
-    return '<div class="lg-row"><span class="lg-dot" style="background:'+sg.color+'"></span>'
-      + '<span class="lg-lbl">'+esc(sg.label)+'</span><span class="lg-val">'+Math.max(0,sg.val)+' ('+pct+'%)</span></div>';
-  }).join('');
-  return '<div class="dcard"><div class="dcard-h">פילוח נוכחות כללי</div>'
-    + '<div class="donut-wrap"><div class="donut"><svg viewBox="0 0 120 120">'+parts+'</svg>'
-    + '<div class="donut-center"><div class="donut-num">'+t.matzevet+'</div><div class="donut-sub">שוחרים</div></div></div>'
-    + '<div class="legend">'+legend+'</div></div></div>';
-}
-
-function dashActions(){
-  var A=[];
-  A.push(['openReportsUI','פתיחת ממשק דיווח','doc']);
-  if(App.profile.canGenerate) A.push(['dashGen','הפקת דוח','report']);
-  if(App.profile.canSeeAll) A.push(['dashBranch','מבט שלוחה','report']);
-  A.push(['dashManage','ניהול שוחרים','present']);
-  if(App.dashData && App.dashData.role){ /* equipment/orders shown if visible via cmdState later */ }
-  var btns=A.map(function(a){ return '<button class="qa" id="'+a[0]+'">'+ic(a[2])+'<span>'+esc(a[1])+'</span></button>'; }).join('');
-  return '<div class="dcard"><div class="dcard-h">פעולות מהירות</div><div class="qa-grid">'+btns+'</div></div>';
-}
-
-function dashPending(d){
-  var inc=d.incompleteClasses||[];
-  var rows = inc.length ? inc.map(function(c){
-    return '<div class="prow"><span class="pbadge">'+c.pending+'</span><span>כיתה '+esc(c.cls)+' טרם השלימה דיווח</span></div>';
-  }).join('') : '<div class="muted" style="padding:8px 2px">כל הכיתות השלימו דיווח</div>';
-  return '<div class="dcard"><div class="dcard-h">פתוחים לטיפול</div>'+rows+'</div>';
-}
-
-function dashNadon(d){
-  var list=d.nadonList||[];
-  if(!list.length) return '<div class="dcard"><div class="dcard-h">נדוני איחור להיום</div><div class="muted" style="padding:8px 2px">אין מאחרים היום</div></div>';
-  var rows=list.map(function(n){
-    return '<div class="nrow"><div><div class="nname">'+esc(n.name)+'</div>'
-      + '<div class="nsub">כיתה '+esc(n.cls)+' | איחורים השבוע '+n.lateCount+'</div></div>'
-      + '<button class="btn slim sm dash-nadon" data-id="'+esc(n.id)+'">הפקת נדון</button></div>';
-  }).join('');
-  return '<div class="dcard"><div class="dcard-h">נדוני איחור להיום</div>'+rows+'</div>';
-}
-
-function paintDashboard(d){
-  var t=d.totals, scope = d.scopeAll ? 'כלל השלוחה' : ('כיתות '+ (App.profile.classes||[]).join(', '));
-  var tiles = dashTile('שוחרים', t.matzevet, '')
-    + dashTile('נוכחים', t.present, t.pct+'%', 'ok')
-    + dashTile('מאחרים', t.late, '', 'warn')
-    + dashTile('נעדרים', t.absent - t.noReport, '', 'bad')
-    + dashTile('לא דיווחו', t.noReport, '', 'bad')
-    + dashTile('בחופשה שנתית', t.onLeave, '', 'mute');
-  el('view').innerHTML =
-    '<div class="dash">'
-    + '<div class="dash-top"><div><div class="dash-hello">שלום '+esc(App.profile.name)+'</div>'
-    +   '<div class="dash-scope">'+esc(scope)+'</div></div>'
-    +   '<div class="dash-clock"><div id="dClock">'+nowClock_()+'</div><div class="dash-date">'+esc(niceDate(d.date))+'</div></div></div>'
-    + '<div class="dtiles">'+tiles+'</div>'
-    + '<div class="dgrid2">'+dashBar(d.perClass)+dashDonut(t)+'</div>'
-    + dashActions()
-    + '<div class="dgrid2">'+dashPending(d)+dashNadon(d)+'</div>'
-    + '</div>';
-  // clock tick
-  if(dashTick) clearInterval(dashTick);
-  dashTick=setInterval(function(){ var c=el('dClock'); if(c) c.textContent=nowClock_(); else clearInterval(dashTick); }, 30000);
-  // actions
-  if(el('openReportsUI')) el('openReportsUI').addEventListener('click', openReportsUI);
-  if(el('dashGen')) el('dashGen').addEventListener('click', function(){ App.cmdView='reports'; renderCommander(); setTimeout(function(){ if(el('genBtn')) el('genBtn').click(); }, 300); });
-  if(el('dashBranch')) el('dashBranch').addEventListener('click', function(){ App.cmdView='reports'; renderCommander(); setTimeout(function(){ if(el('dashBtn')) el('dashBtn').click(); }, 300); });
-  if(el('dashManage')) el('dashManage').addEventListener('click', function(){ openManage(); });
-  el('view').querySelectorAll('.dash-nadon').forEach(function(b){ b.addEventListener('click', function(){ openNadon(b.getAttribute('data-id')); }); });
-}
-
 function renderCommander(fromCache){
   if(fromCache && App.initial){ var c0 = App.initial; App.initial = null; saveSnap_(c0); return paintCommander(c0); }
   var cached = readSnap_();
@@ -1631,13 +1509,11 @@ function paintCommander(d){
     var eqOn = !!d.equipmentVisible;
     var bar = (p.canGenerate || canFuture || eqOn)
       ? '<div class="toolbar">'
-        + (isDesktop_() ? '<button class="btn ghost" id="toDash">חזרה לדאשבורד</button>' : '')
         + (p.canGenerate ? '<button class="btn gold" id="genBtn">הפקת דוח להיום</button>' : '')
         + (p.canSeeAll ? '<button class="btn ghost" id="dashBtn">מבט שלוחה</button>' : '')
         + (canFuture ? '<button class="btn ghost" id="futureBtn">'+(d.futureOpen?'סגירת דיווח עתידי':'פתיחת דיווח עתידי')+'</button>' : '')
         + '<button class="btn ghost" id="bulkBtn">דיווח גורף</button>'
         + (canFuture ? '<button class="btn ghost" id="lockBtn">'+((d.dayLock&&d.dayLock.locked)?'ביטול נעילת היום':'נעילת היום')+'</button>' : '')
-        + '<button class="btn ghost" id="checkoutToggle">'+(d.checkoutEnabled?'סגירת דיווח יציאה':'פתיחת דיווח יציאה')+'</button>'
         + (canFuture ? '<button class="btn ghost" id="manageBtn">ניהול שוחרים</button>' : '')
         + (eqOn ? '<button class="btn ghost" id="ordersBtn">תכלול הזמנות</button>' : '')
         + '</div>'
@@ -1667,14 +1543,6 @@ function bindCmdTop(){
   if(el('bulkBtn')) el('bulkBtn').addEventListener('click', openBulk);
   if(el('manageBtn')) el('manageBtn').addEventListener('click', openManage);
   if(el('ordersBtn')) el('ordersBtn').addEventListener('click', function(){ downloadOrdersExcel(el('ordersBtn')); });
-  if(el('toDash')) el('toDash').addEventListener('click', backToDashboard);
-  if(el('checkoutToggle')) el('checkoutToggle').addEventListener('click', function(){
-    var cur = !!(cmdState.data && cmdState.data.checkoutEnabled); var next=!cur;
-    var b=el('checkoutToggle'); if(cmdState.data) cmdState.data.checkoutEnabled=next;
-    b.textContent = next?'סגירת דיווח יציאה':'פתיחת דיווח יציאה';
-    toast(next?'דיווח יציאה נפתח':'דיווח יציאה נסגר');
-    callServer('setCheckoutEnabled', App.token, next).catch(function(e){ if(cmdState.data) cmdState.data.checkoutEnabled=cur; b.textContent=cur?'סגירת דיווח יציאה':'פתיחת דיווח יציאה'; toast(e.message,true); });
-  });
   if(el('lockBtn')) el('lockBtn').addEventListener('click', function(){
     var locked = !!(cmdState.data && cmdState.data.dayLock && cmdState.data.dayLock.locked);
     if(locked){ callServer('setDayLock', App.token, App.date, false, '').then(function(){ toast('נעילת היום בוטלה'); renderCommander(); }).catch(function(e){toast(e.message,true);}); }
@@ -1699,7 +1567,8 @@ function classSummary(c){
 }
 
 function coCell(s){
-  if(!(cmdState.data && cmdState.data.checkoutEnabled)) return '';
+  var _c = cmdState.data && cmdState.data.classes[cmdState.active];
+  if(!(_c && _c.checkoutEnabled)) return '';
   var st=s.checkoutStatus||''; var lbl = st==='אושר' ? ('יצא '+esc(s.checkoutAt||'')) : (st==='ממתין' ? ('דיווח יציאה '+esc(s.checkoutAt||'')) : 'טרם דיווח יציאה');
   var cls = st==='אושר' ? 'ap-ok' : (st==='ממתין' ? 'ap-pending' : 'ap-none');
   var appr = (st==='אושר' && s.checkoutApprover) ? (' | אישר '+esc(s.checkoutApprover)) : '';
@@ -1827,6 +1696,7 @@ function renderClassPane(){
   el('classPane').innerHTML =
     '<div class="panel"><div class="head">'
     + '<div><h2>כיתה '+esc(c.cls)+'</h2><div class="sub" style="margin-top:6px">'+classSummary(c)+'</div>'
+      + (ok ? '<button class="btn ghost sm" id="coToggleBtn" style="margin-top:10px">'+(c.checkoutEnabled?'סגירת דיווח יציאה':'פתיחת דיווח יציאה')+'</button>' : '')
       + '</div>'
     + cutoffCtl + '</div>'
     + '<div class="body" style="padding:16px 24px;border-bottom:1px solid var(--line-2)">'
@@ -1851,6 +1721,13 @@ function renderClassPane(){
     b.addEventListener('click', function(){ openNadon(b.getAttribute('data-id')); });
   });
   bindCheckoutApprove_();
+  if(el('coToggleBtn')) el('coToggleBtn').addEventListener('click', function(){
+    var c=cmdState.data.classes[cmdState.active]; var cur=!!c.checkoutEnabled; var next=!cur;
+    c.checkoutEnabled=next; var b=el('coToggleBtn'); b.textContent=next?'סגירת דיווח יציאה':'פתיחת דיווח יציאה';
+    renderClassPane();
+    callServer('setCheckoutEnabled', App.token, c.cls, next).then(function(){ toast(next?'דיווח יציאה נפתח לכיתה '+c.cls:'דיווח יציאה נסגר'); })
+      .catch(function(e){ c.checkoutEnabled=cur; renderClassPane(); toast(e.message,true); });
+  });
 
   if(ok){
     document.querySelectorAll('.stat-sel, .stat-sel-m').forEach(function(el){
