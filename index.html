@@ -666,6 +666,8 @@
   .nrow:first-of-type{ border-top:0; }
   .nname{ font-weight:700; font-size:14px; } .nsub{ font-size:12px; color:var(--muted); margin-top:2px; }
 
+  .co-line{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:6px; }
+  .co-line .btn{ flex:0 0 auto; }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -1202,6 +1204,30 @@ function heroBlock(d){
 }
 
 /* כרטיס אישור אחד, ברור ומלא */
+function checkoutBlock(d){
+  if(!d.checkoutEnabled) return '';
+  var co = d.myCheckout;
+  if(co && co.status==='אושר'){
+    return '<div class="verdict ok" style="margin-top:14px"><div class="v-head"><div class="v-ic">'+ic('check')+'</div>'
+      + '<div><div class="v-ttl">דיווח היציאה אושר</div><div class="v-sub">היציאה נקלטה ואושרה על ידי המפקד</div></div></div>'
+      + '<div class="v-rows"><div class="v-row"><span class="k">שעת יציאה</span><span class="val">'+esc(co.at||'')+'</span></div>'
+      + (co.approver?'<div class="v-row"><span class="k">אישר</span><span class="val">'+esc(co.approver)+'</span></div>':'')+'</div></div>';
+  }
+  if(co){
+    return '<div class="verdict wait" style="margin-top:14px"><div class="v-head"><div class="v-ic">'+ic('hourglass')+'</div>'
+      + '<div><div class="v-ttl">דיווח יציאה ממתין לאישור</div><div class="v-sub">דיווחת יציאה בשעה '+esc(co.at||'')+'</div></div></div></div>';
+  }
+  return '<div class="panel" style="margin-top:14px"><div class="body" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">'
+    + '<div><div style="font-weight:700">דיווח יציאה פתוח</div><div class="muted" style="font-size:13px">בסיום היום יש לדווח יציאה</div></div>'
+    + '<button class="btn gold" id="checkoutBtn">אישור יציאה</button></div></div>';
+}
+function bindCheckout_(){
+  if(el('checkoutBtn')) el('checkoutBtn').addEventListener('click', function(){
+    var b=el('checkoutBtn'); b.disabled=true; b.textContent='שולח';
+    callServer('studentCheckout', App.token).then(function(){ toast('דיווח היציאה נשלח'); renderStudent(); })
+      .catch(function(e){ b.disabled=false; b.textContent='אישור יציאה'; toast(e.message,true); });
+  });
+}
 function verdictBlock(d){
   if(!d.report) return '';
   var r = d.report;
@@ -1315,7 +1341,7 @@ function drawStudent(){
       + '<div class="verdict wait" style="border-top-color:var(--slate)">'
       + '<div class="v-head"><div class="v-ic" style="background:var(--sky-soft);color:var(--navy)">'+ic('ban')+'</div>'
       + '<div><div class="v-ttl">'+esc(d.dayLock.message||'אין דיווח היום')+'</div>'
-      + '<div class="v-sub">היום נעול לדיווח על ידי הפיקוד</div></div></div>'+eqInlineHost()+'</div>';
+      + '<div class="v-sub">היום נעול לדיווח על ידי הפיקוד</div></div></div>'+checkoutBlock(d)+eqInlineHost()+'</div>';
     bindMyLog_();
     return;
   }
@@ -1324,7 +1350,7 @@ function drawStudent(){
     var future = (stuDate && stuDate !== App.date);
   var dayTabsHtml = '<div class="daytabs" id="dayTabs"></div>';
   var futureBadge = future ? '<div class="banner warn">זהו דיווח עתידי לתאריך '+esc(shortDate(stuDate))+'. ניתן לעדכן אותו עד אותו היום.</div>' : '';
-  el('view').innerHTML = '<div class="fade">'+bd+dayTabsHtml+futureBadge+heroBlock(d)+verdictBlock(d)+tipsBlock()+eqInlineHost()+'</div>';
+  el('view').innerHTML = '<div class="fade">'+bd+dayTabsHtml+futureBadge+heroBlock(d)+verdictBlock(d)+checkoutBlock(d)+tipsBlock()+eqInlineHost()+'</div>';
     bindMyLog_();
     return;
   }
@@ -1379,6 +1405,7 @@ function drawStudent(){
     +   (d.report ? 'עדכון הדיווח' : 'שליחת הדיווח')+'</button>'
     +   '<span class="note" id="saveNote">'+(stu.saving?'שומר':'')+'</span></div>'
     + '</div>'
+    + checkoutBlock(d)
     + tipsBlock()
     + eqInlineHost()
     + '</div>';
@@ -1610,6 +1637,7 @@ function paintCommander(d){
         + (canFuture ? '<button class="btn ghost" id="futureBtn">'+(d.futureOpen?'סגירת דיווח עתידי':'פתיחת דיווח עתידי')+'</button>' : '')
         + '<button class="btn ghost" id="bulkBtn">דיווח גורף</button>'
         + (canFuture ? '<button class="btn ghost" id="lockBtn">'+((d.dayLock&&d.dayLock.locked)?'ביטול נעילת היום':'נעילת היום')+'</button>' : '')
+        + '<button class="btn ghost" id="checkoutToggle">'+(d.checkoutEnabled?'סגירת דיווח יציאה':'פתיחת דיווח יציאה')+'</button>'
         + (canFuture ? '<button class="btn ghost" id="manageBtn">ניהול שוחרים</button>' : '')
         + (eqOn ? '<button class="btn ghost" id="ordersBtn">תכלול הזמנות</button>' : '')
         + '</div>'
@@ -1640,6 +1668,13 @@ function bindCmdTop(){
   if(el('manageBtn')) el('manageBtn').addEventListener('click', openManage);
   if(el('ordersBtn')) el('ordersBtn').addEventListener('click', function(){ downloadOrdersExcel(el('ordersBtn')); });
   if(el('toDash')) el('toDash').addEventListener('click', backToDashboard);
+  if(el('checkoutToggle')) el('checkoutToggle').addEventListener('click', function(){
+    var cur = !!(cmdState.data && cmdState.data.checkoutEnabled); var next=!cur;
+    var b=el('checkoutToggle'); if(cmdState.data) cmdState.data.checkoutEnabled=next;
+    b.textContent = next?'סגירת דיווח יציאה':'פתיחת דיווח יציאה';
+    toast(next?'דיווח יציאה נפתח':'דיווח יציאה נסגר');
+    callServer('setCheckoutEnabled', App.token, next).catch(function(e){ if(cmdState.data) cmdState.data.checkoutEnabled=cur; b.textContent=cur?'סגירת דיווח יציאה':'פתיחת דיווח יציאה'; toast(e.message,true); });
+  });
   if(el('lockBtn')) el('lockBtn').addEventListener('click', function(){
     var locked = !!(cmdState.data && cmdState.data.dayLock && cmdState.data.dayLock.locked);
     if(locked){ callServer('setDayLock', App.token, App.date, false, '').then(function(){ toast('נעילת היום בוטלה'); renderCommander(); }).catch(function(e){toast(e.message,true);}); }
@@ -1663,6 +1698,19 @@ function classSummary(c){
       }).join('') + '</span>';
 }
 
+function coCell(s){
+  if(!(cmdState.data && cmdState.data.checkoutEnabled)) return '';
+  var st=s.checkoutStatus||''; var lbl = st==='אושר' ? ('יצא '+esc(s.checkoutAt||'')) : (st==='ממתין' ? ('דיווח יציאה '+esc(s.checkoutAt||'')) : 'טרם דיווח יציאה');
+  var cls = st==='אושר' ? 'ap-ok' : (st==='ממתין' ? 'ap-pending' : 'ap-none');
+  var appr = (st==='אושר' && s.checkoutApprover) ? (' | אישר '+esc(s.checkoutApprover)) : '';
+  var btn = (s.canApprove && s.checkoutStatus==='ממתין') ? '<button class="btn slim sm co-approve" data-id="'+esc(s.id)+'">אישור יציאה</button>' : '';
+  return '<div class="co-line"><span class="approval '+cls+'">'+lbl+appr+'</span>'+btn+'</div>';
+}
+function bindCheckoutApprove_(){
+  document.querySelectorAll('.co-approve').forEach(function(b){ b.addEventListener('click', function(){
+    b.disabled=true; callServer('approveCheckouts', App.token, [b.getAttribute('data-id')]).then(function(){ toast('יציאה אושרה'); renderCommander(); }).catch(function(e){ b.disabled=false; toast(e.message,true); });
+  }); });
+}
 function renderClassPane(){
   var c = cmdState.data.classes[cmdState.active], statuses = cmdState.data.statuses, ok = c.canApprove;
 
@@ -1690,7 +1738,7 @@ function renderClassPane(){
     return '<tr class="'+(s.noReport?'norep ':'')+(s.saving?'rowsaving':'')+'">'
       + '<td><span class="idx">'+(c.students.indexOf(s)+1)+'.</span> <a class="name namelink" data-id="'+esc(s.id)+'" href="#">'+esc(s.name)+'</a>'+candle+'</td>'
       + '<td>'+sel+'</td><td style="min-width:180px">'+reason+'</td>'
-      + '<td><span class="approval '+apCls+'">'+esc(apTxt)+'</span>'+approvedInfo(s)+'</td>'
+      + '<td><span class="approval '+apCls+'">'+esc(apTxt)+'</span>'+approvedInfo(s)+coCell(s)+'</td>'
       + '<td>'+actions+'</td></tr>';
   }).join('');
 
@@ -1726,7 +1774,7 @@ function renderClassPane(){
       return '<div class="scard '+(s.noReport?'norep':'')+'"><div class="top">'
         + '<span class="nm"><span class="idx">'+idx+'.</span><a class="namelink" data-id="'+esc(s.id)+'" href="#">'+esc(s.name)+'</a>'+candle+'</span>'
         + '<span class="approval '+apCls+'">'+esc(apTxt)+'</span></div>'
-        + '<div class="muted" style="font-size:14px">סטטוס: '+esc(s.status)+(s.reason?' | '+esc(s.reason):'')+'</div></div>';
+        + '<div class="muted" style="font-size:14px">סטטוס: '+esc(s.status)+(s.reason?' | '+esc(s.reason):'')+'</div>'+coCell(s)+'</div>';
     }
 
     var picking = (s._picking === true);
@@ -1771,7 +1819,7 @@ function renderClassPane(){
       +   '<button class="chg mtoggle" data-id="'+esc(s.id)+'">'+(picking?'סגירה':'שינוי')+'</button></div>'
       + pickerHtml
       + reasonHtml
-      + acts + '</div>';
+      + acts + coCell(s) + '</div>';
   }).join('');
 
     if(!cards) cards = '<div class="muted center" style="padding:30px">לא נמצא שוחר בשם הזה</div>';
@@ -1802,6 +1850,7 @@ function renderClassPane(){
   document.querySelectorAll('.act-nadon').forEach(function(b){
     b.addEventListener('click', function(){ openNadon(b.getAttribute('data-id')); });
   });
+  bindCheckoutApprove_();
 
   if(ok){
     document.querySelectorAll('.stat-sel, .stat-sel-m').forEach(function(el){
