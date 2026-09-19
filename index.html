@@ -1320,6 +1320,7 @@ function infoStrip(d){
 function bindMyLog_(){
   if(el('myLogBtn')) el('myLogBtn').addEventListener('click', function(){ openMonthLog(null, false); });
   if(el('myEquipBtn')) el('myEquipBtn').addEventListener('click', toggleMyEquip);
+  bindCheckout_();
 }
 function toggleMyEquip(){
   var pnl=el('myEquip'); if(!pnl) return;
