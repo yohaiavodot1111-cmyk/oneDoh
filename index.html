@@ -668,6 +668,11 @@
 
   .co-line{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:6px; }
   .co-line .btn{ flex:0 0 auto; }
+  .nowbox{ text-align:center; margin-inline-start:auto; padding:0 18px; border-inline-start:1px solid rgba(255,255,255,.18); }
+  .now-time{ font-family:var(--display); font-weight:700; font-size:24px; letter-spacing:.02em; line-height:1; color:#fff; }
+  .now-date{ font-size:12px; color:#CFE0EE; margin-top:4px; white-space:nowrap; }
+  @media(max-width:620px){ .nowbox{ padding:0 10px; margin-inline-start:auto; }
+    .now-time{ font-size:18px; } .now-date{ font-size:10.5px; } }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -718,6 +723,10 @@
       <div class="titles">
         <div class="unit">מסלול השוחרות שלוחת אשקלון</div>
         <div class="sys">דו"ח אחד</div>
+      </div>
+      <div class="nowbox" id="nowBox">
+        <div class="now-time" id="nowTime"></div>
+        <div class="now-date" id="nowDate"></div>
       </div>
       <div class="whoami">
         <b id="whoName"></b>
@@ -928,6 +937,16 @@ function loadScreen_(){
   try { var raw = sessionStorage.getItem(screenKey_()); return raw ? JSON.parse(raw) : null; } catch(e){ return null; }
 }
 
+var _clockTick=null;
+function heDateTime_(){
+  var d=new Date(), p=function(n){return (n<10?'0':'')+n;};
+  var days=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+  var mons=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
+  return { time: p(d.getHours())+':'+p(d.getMinutes()), date: 'יום '+days[d.getDay()]+', '+d.getDate()+' ב'+mons[d.getMonth()]+' '+d.getFullYear() };
+}
+function tickClock_(){ var t=el('nowTime'), dd=el('nowDate'); if(!t||!dd){ return; } var v=heDateTime_(); t.textContent=v.time; dd.textContent=v.date; }
+function startClock_(){ tickClock_(); if(_clockTick) clearInterval(_clockTick); _clockTick=setInterval(tickClock_, 15000); }
+function stopClock_(){ if(_clockTick){ clearInterval(_clockTick); _clockTick=null; } }
 function enterPortal(){
   if(!App.token || !App.profile){ return; }
   el('login').classList.add('hidden'); el('portal').classList.remove('hidden');
@@ -944,12 +963,13 @@ function enterPortal(){
     var cached = loadScreen_();
     if(cached){ App.initial = cached; App.fromCache = true; }
   }
+  startClock_();
   route(true);
   startPolling();
   if(App.fromCache){ App.fromCache = false; refreshNow_(); }
 }
 el('logoutBtn').addEventListener('click', function(){
-  stopPolling();
+  stopPolling(); stopClock_();
   try { sessionStorage.removeItem('dohehad_session'); } catch(e){}
   App.token=null; App.profile=null; App.initial=null;
   el('portal').classList.add('hidden'); el('login').classList.remove('hidden');
