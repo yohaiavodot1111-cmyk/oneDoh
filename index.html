@@ -614,6 +614,58 @@
     .eq-grid, #dEquipBody .eq-grid{ grid-template-columns:1fr; }
     .titles .sys{ font-size:21px; }
   }
+
+  /* ================= דאשבורד מפקד ================= */
+  .dash{ display:flex; flex-direction:column; gap:16px; }
+  .dash-load{ padding:60px 0; text-align:center; }
+  .dash-top{ display:flex; align-items:center; justify-content:space-between; gap:16px;
+    background:linear-gradient(160deg,var(--navy),var(--navy-deep)); color:#fff; border-radius:16px; padding:20px 24px; box-shadow:var(--shadow-md); }
+  .dash-hello{ font-family:var(--display); font-weight:700; font-size:22px; }
+  .dash-scope{ font-size:13px; opacity:.85; margin-top:3px; }
+  .dash-clock{ text-align:left; }
+  #dClock{ font-family:var(--display); font-weight:700; font-size:30px; letter-spacing:.02em; }
+  .dash-date{ font-size:12.5px; opacity:.85; }
+  .dtiles{ display:grid; grid-template-columns:repeat(6,1fr); gap:12px; }
+  @media(max-width:1100px){ .dtiles{ grid-template-columns:repeat(3,1fr); } }
+  .dtile{ background:#fff; border:1px solid var(--line); border-top:3px solid var(--slate); border-radius:12px; padding:16px; text-align:center; box-shadow:var(--shadow-sm); }
+  .dtile.ok{ border-top-color:var(--present); } .dtile.warn{ border-top-color:var(--late); }
+  .dtile.bad{ border-top-color:var(--absent); } .dtile.mute{ border-top-color:#B9C8D6; }
+  .dtile-v{ font-family:var(--display); font-weight:700; font-size:30px; color:var(--navy); line-height:1; }
+  .dtile-l{ font-size:13px; color:var(--ink); margin-top:6px; }
+  .dtile-s{ font-size:12px; color:var(--present); font-weight:700; margin-top:2px; }
+  .dgrid2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media(max-width:900px){ .dgrid2{ grid-template-columns:1fr; } }
+  .dcard{ background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px; box-shadow:var(--shadow-sm); }
+  .dcard-h{ font-family:var(--display); font-weight:700; font-size:16px; color:var(--navy); margin-bottom:14px; }
+  .barchart{ display:flex; align-items:flex-end; gap:10px; height:200px; }
+  .bar-col{ flex:1 1 0; display:flex; flex-direction:column; align-items:center; height:100%; }
+  .bar-val{ font-size:12px; font-weight:700; color:var(--navy); margin-bottom:4px; }
+  .bar-track{ flex:1 1 auto; width:70%; max-width:46px; background:var(--line-2); border-radius:7px 7px 0 0; display:flex; align-items:flex-end; overflow:hidden; }
+  .bar-fill{ width:100%; background:linear-gradient(180deg,var(--slate),var(--blue)); border-radius:7px 7px 0 0; }
+  .bar-x{ font-size:12.5px; font-weight:700; color:var(--ink); margin-top:6px; }
+  .donut-wrap{ display:flex; align-items:center; gap:20px; flex-wrap:wrap; }
+  .donut{ position:relative; width:150px; height:150px; flex:0 0 auto; }
+  .donut svg{ width:150px; height:150px; }
+  .donut-center{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .donut-num{ font-family:var(--display); font-weight:700; font-size:26px; color:var(--navy); }
+  .donut-sub{ font-size:12px; color:var(--muted); }
+  .legend{ flex:1 1 auto; display:flex; flex-direction:column; gap:7px; min-width:160px; }
+  .lg-row{ display:flex; align-items:center; gap:8px; font-size:13.5px; }
+  .lg-dot{ width:11px; height:11px; border-radius:3px; flex:0 0 auto; }
+  .lg-lbl{ flex:1 1 auto; color:var(--ink); } .lg-val{ color:var(--muted); font-weight:600; }
+  .qa-grid{ display:grid; grid-template-columns:repeat(6,1fr); gap:10px; }
+  @media(max-width:1100px){ .qa-grid{ grid-template-columns:repeat(3,1fr); } }
+  .qa{ display:flex; flex-direction:column; align-items:center; gap:8px; background:var(--paper); border:1px solid var(--line);
+    border-radius:12px; padding:16px 10px; cursor:pointer; font-family:inherit; color:var(--navy); font-weight:600; font-size:13px; transition:background .15s,box-shadow .15s; }
+  .qa:hover{ background:#fff; box-shadow:var(--shadow-sm); }
+  .qa svg{ width:22px; height:22px; }
+  .prow{ display:flex; align-items:center; gap:10px; padding:8px 2px; font-size:14px; border-top:1px solid var(--line-2); }
+  .prow:first-of-type{ border-top:0; }
+  .pbadge{ background:var(--late); color:#fff; font-weight:700; font-size:12px; min-width:24px; text-align:center; border-radius:20px; padding:1px 7px; }
+  .nrow{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:9px 2px; border-top:1px solid var(--line-2); }
+  .nrow:first-of-type{ border-top:0; }
+  .nname{ font-weight:700; font-size:14px; } .nsub{ font-size:12px; color:var(--muted); margin-top:2px; }
+
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -732,7 +784,11 @@ var RPC_MAP = {
   equipDelete:         ['equipment_delete',      ['p_token','p_item']],
   equipUnsign:         ['equipment_unsign',      ['p_token','p_item']],
   equipReturn:         ['equipment_return',      ['p_token','p_item']],
-  equipOpenOrders:     ['equipment_open_orders', ['p_token']]
+  equipOpenOrders:     ['equipment_open_orders', ['p_token']],
+  dashboardData:       ['dashboard_data',        ['p_token','p_date']],
+  setCheckoutEnabled:  ['set_checkout_enabled',  ['p_token','p_on']],
+  studentCheckout:     ['student_checkout',      ['p_token']],
+  approveCheckouts:    ['commander_approve_checkouts', ['p_token','p_ids']]
 };
 
 function callServer(action){
@@ -904,8 +960,11 @@ window.addEventListener('beforeunload', function(e){
   if(pendingCount() > 0){ e.preventDefault(); e.returnValue = ''; }
 });
 
+function isDesktop_(){ return window.matchMedia('(min-width:900px)').matches; }
 function route(fromCache){
-  return App.profile.kind==='student' ? renderStudent(fromCache) : renderCommander(fromCache);
+  if(App.profile.kind==='student') return renderStudent(fromCache);
+  if(isDesktop_() && App.cmdView!=='reports') return renderDashboard();
+  return renderCommander(fromCache);
 }
 
 function sessionExpired_(msg){
@@ -1398,6 +1457,126 @@ function nowHM(){
 
 /* ============ מסך מפקד ============ */
 var cmdState={data:null, active:0};
+var dashTick=null;
+function openReportsUI(){ App.cmdView='reports'; renderCommander(); }
+function backToDashboard(){ App.cmdView='dashboard'; renderDashboard(); }
+
+function renderDashboard(){
+  el('view').innerHTML = '<div class="dash"><div class="dash-load">'+spinner()+'</div></div>';
+  callServer('dashboardData', App.token, App.date).then(function(d){
+    App.dashData=d; paintDashboard(d);
+  }).catch(function(e){
+    if(isAuthError_(e.message)) return sessionExpired_('החיבור פג, יש להתחבר שוב');
+    el('view').innerHTML='<div class="panel"><div class="body">לא ניתן לטעון את הדאשבורד כרגע</div></div>';
+    toast(e.message,true);
+  });
+}
+
+function nowClock_(){ var d=new Date(),p=function(n){return (n<10?'0':'')+n;}; return p(d.getHours())+':'+p(d.getMinutes()); }
+
+function dashTile(label, value, sub, tone){
+  return '<div class="dtile '+(tone||'')+'"><div class="dtile-v">'+value+'</div>'
+    + '<div class="dtile-l">'+esc(label)+'</div>'+(sub?('<div class="dtile-s">'+sub+'</div>'):'')+'</div>';
+}
+
+function dashBar(perClass){
+  if(!perClass.length) return '';
+  var bars = perClass.map(function(c){
+    var h = Math.max(2, c.pct);
+    return '<div class="bar-col"><div class="bar-val">'+c.pct+'%</div>'
+      + '<div class="bar-track"><div class="bar-fill" style="height:'+h+'%"></div></div>'
+      + '<div class="bar-x">'+esc(c.cls)+'</div></div>';
+  }).join('');
+  return '<div class="dcard"><div class="dcard-h">אחוז נוכחות לפי כיתה</div><div class="barchart">'+bars+'</div></div>';
+}
+
+function dashDonut(t){
+  var segs=[
+    {label:'נוכחים', val:t.present, color:'var(--present)'},
+    {label:'מאחרים', val:t.late, color:'var(--late)'},
+    {label:'נעדרים', val:t.absent - t.noReport, color:'var(--absent)'},
+    {label:'לא דיווחו', val:t.noReport, color:'#94A3B8'},
+    {label:'בחופשה', val:t.onLeave, color:'#B9C8D6'}
+  ];
+  var tot=segs.reduce(function(a,x){return a+Math.max(0,x.val);},0) || 1;
+  var acc=0, R=52, C=2*Math.PI*R, parts='';
+  segs.forEach(function(sg){
+    var v=Math.max(0,sg.val); if(v<=0) return;
+    var len=C*v/tot, off=C*acc/tot;
+    parts += '<circle cx="60" cy="60" r="'+R+'" fill="none" stroke="'+sg.color+'" stroke-width="16" '
+      + 'stroke-dasharray="'+len+' '+(C-len)+'" stroke-dashoffset="'+(-off)+'" transform="rotate(-90 60 60)"/>';
+    acc+=v;
+  });
+  var legend=segs.map(function(sg){
+    var pct = Math.round(Math.max(0,sg.val)*100/tot);
+    return '<div class="lg-row"><span class="lg-dot" style="background:'+sg.color+'"></span>'
+      + '<span class="lg-lbl">'+esc(sg.label)+'</span><span class="lg-val">'+Math.max(0,sg.val)+' ('+pct+'%)</span></div>';
+  }).join('');
+  return '<div class="dcard"><div class="dcard-h">פילוח נוכחות כללי</div>'
+    + '<div class="donut-wrap"><div class="donut"><svg viewBox="0 0 120 120">'+parts+'</svg>'
+    + '<div class="donut-center"><div class="donut-num">'+t.matzevet+'</div><div class="donut-sub">שוחרים</div></div></div>'
+    + '<div class="legend">'+legend+'</div></div></div>';
+}
+
+function dashActions(){
+  var A=[];
+  A.push(['openReportsUI','פתיחת ממשק דיווח','doc']);
+  if(App.profile.canGenerate) A.push(['dashGen','הפקת דוח','report']);
+  if(App.profile.canSeeAll) A.push(['dashBranch','מבט שלוחה','report']);
+  A.push(['dashManage','ניהול שוחרים','present']);
+  if(App.dashData && App.dashData.role){ /* equipment/orders shown if visible via cmdState later */ }
+  var btns=A.map(function(a){ return '<button class="qa" id="'+a[0]+'">'+ic(a[2])+'<span>'+esc(a[1])+'</span></button>'; }).join('');
+  return '<div class="dcard"><div class="dcard-h">פעולות מהירות</div><div class="qa-grid">'+btns+'</div></div>';
+}
+
+function dashPending(d){
+  var inc=d.incompleteClasses||[];
+  var rows = inc.length ? inc.map(function(c){
+    return '<div class="prow"><span class="pbadge">'+c.pending+'</span><span>כיתה '+esc(c.cls)+' טרם השלימה דיווח</span></div>';
+  }).join('') : '<div class="muted" style="padding:8px 2px">כל הכיתות השלימו דיווח</div>';
+  return '<div class="dcard"><div class="dcard-h">פתוחים לטיפול</div>'+rows+'</div>';
+}
+
+function dashNadon(d){
+  var list=d.nadonList||[];
+  if(!list.length) return '<div class="dcard"><div class="dcard-h">נדוני איחור להיום</div><div class="muted" style="padding:8px 2px">אין מאחרים היום</div></div>';
+  var rows=list.map(function(n){
+    return '<div class="nrow"><div><div class="nname">'+esc(n.name)+'</div>'
+      + '<div class="nsub">כיתה '+esc(n.cls)+' | איחורים השבוע '+n.lateCount+'</div></div>'
+      + '<button class="btn slim sm dash-nadon" data-id="'+esc(n.id)+'">הפקת נדון</button></div>';
+  }).join('');
+  return '<div class="dcard"><div class="dcard-h">נדוני איחור להיום</div>'+rows+'</div>';
+}
+
+function paintDashboard(d){
+  var t=d.totals, scope = d.scopeAll ? 'כלל השלוחה' : ('כיתות '+ (App.profile.classes||[]).join(', '));
+  var tiles = dashTile('שוחרים', t.matzevet, '')
+    + dashTile('נוכחים', t.present, t.pct+'%', 'ok')
+    + dashTile('מאחרים', t.late, '', 'warn')
+    + dashTile('נעדרים', t.absent - t.noReport, '', 'bad')
+    + dashTile('לא דיווחו', t.noReport, '', 'bad')
+    + dashTile('בחופשה שנתית', t.onLeave, '', 'mute');
+  el('view').innerHTML =
+    '<div class="dash">'
+    + '<div class="dash-top"><div><div class="dash-hello">שלום '+esc(App.profile.name)+'</div>'
+    +   '<div class="dash-scope">'+esc(scope)+'</div></div>'
+    +   '<div class="dash-clock"><div id="dClock">'+nowClock_()+'</div><div class="dash-date">'+esc(niceDate(d.date))+'</div></div></div>'
+    + '<div class="dtiles">'+tiles+'</div>'
+    + '<div class="dgrid2">'+dashBar(d.perClass)+dashDonut(t)+'</div>'
+    + dashActions()
+    + '<div class="dgrid2">'+dashPending(d)+dashNadon(d)+'</div>'
+    + '</div>';
+  // clock tick
+  if(dashTick) clearInterval(dashTick);
+  dashTick=setInterval(function(){ var c=el('dClock'); if(c) c.textContent=nowClock_(); else clearInterval(dashTick); }, 30000);
+  // actions
+  if(el('openReportsUI')) el('openReportsUI').addEventListener('click', openReportsUI);
+  if(el('dashGen')) el('dashGen').addEventListener('click', function(){ App.cmdView='reports'; renderCommander(); setTimeout(function(){ if(el('genBtn')) el('genBtn').click(); }, 300); });
+  if(el('dashBranch')) el('dashBranch').addEventListener('click', function(){ App.cmdView='reports'; renderCommander(); setTimeout(function(){ if(el('dashBtn')) el('dashBtn').click(); }, 300); });
+  if(el('dashManage')) el('dashManage').addEventListener('click', function(){ openManage(); });
+  el('view').querySelectorAll('.dash-nadon').forEach(function(b){ b.addEventListener('click', function(){ openNadon(b.getAttribute('data-id')); }); });
+}
+
 function renderCommander(fromCache){
   if(fromCache && App.initial){ var c0 = App.initial; App.initial = null; saveSnap_(c0); return paintCommander(c0); }
   var cached = readSnap_();
@@ -1425,6 +1604,7 @@ function paintCommander(d){
     var eqOn = !!d.equipmentVisible;
     var bar = (p.canGenerate || canFuture || eqOn)
       ? '<div class="toolbar">'
+        + (isDesktop_() ? '<button class="btn ghost" id="toDash">חזרה לדאשבורד</button>' : '')
         + (p.canGenerate ? '<button class="btn gold" id="genBtn">הפקת דוח להיום</button>' : '')
         + (p.canSeeAll ? '<button class="btn ghost" id="dashBtn">מבט שלוחה</button>' : '')
         + (canFuture ? '<button class="btn ghost" id="futureBtn">'+(d.futureOpen?'סגירת דיווח עתידי':'פתיחת דיווח עתידי')+'</button>' : '')
@@ -1459,6 +1639,7 @@ function bindCmdTop(){
   if(el('bulkBtn')) el('bulkBtn').addEventListener('click', openBulk);
   if(el('manageBtn')) el('manageBtn').addEventListener('click', openManage);
   if(el('ordersBtn')) el('ordersBtn').addEventListener('click', function(){ downloadOrdersExcel(el('ordersBtn')); });
+  if(el('toDash')) el('toDash').addEventListener('click', backToDashboard);
   if(el('lockBtn')) el('lockBtn').addEventListener('click', function(){
     var locked = !!(cmdState.data && cmdState.data.dayLock && cmdState.data.dayLock.locked);
     if(locked){ callServer('setDayLock', App.token, App.date, false, '').then(function(){ toast('נעילת היום בוטלה'); renderCommander(); }).catch(function(e){toast(e.message,true);}); }
