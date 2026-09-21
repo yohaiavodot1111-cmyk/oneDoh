@@ -681,6 +681,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0B3D66">
+  <link rel="apple-touch-icon" href="icon-192.png">
 </head>
 <body>
 
@@ -761,8 +764,62 @@
 /* שני המפתחות של הפרויקט. ציבוריים, מיועדים לשימוש באתר. */
 var SUPABASE_URL = 'https://zxguesmularocxnadcub.supabase.co';
 var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp4Z3Vlc211bGFyb2N4bmFkY3ViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkzMTM4NzgsImV4cCI6MjEwNDg4OTg3OH0.jGneB_F8ONpAvcVgIME7ZwsRX3weEfOJEptK2Q_A1ms';
+var VAPID_PUBLIC = 'BGxeIbP_hoLKgHJMPUEehUdyP0u1CGGmZNT9rswmlsC_2YciPKqv8IMI3BKGcMoVT4TuqXXQvpGF79T7ksZrFs4';
 
 var _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+/* ============ התראות פוש (Web Push) ============ */
+var _swReg = null;
+function pushSupported(){ return ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window); }
+function isIOS(){ return /iphone|ipad|ipod/i.test(navigator.userAgent); }
+function isStandalone(){ return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; }
+function urlB64ToUint8(b64){
+  var pad='='.repeat((4 - b64.length % 4) % 4);
+  var base=(b64+pad).replace(/-/g,'+').replace(/_/g,'/');
+  var raw=atob(base); var out=new Uint8Array(raw.length);
+  for(var i=0;i<raw.length;i++) out[i]=raw.charCodeAt(i);
+  return out;
+}
+function registerSW(){
+  if(!('serviceWorker' in navigator)) return Promise.resolve(null);
+  return navigator.serviceWorker.register('sw.js').then(function(r){ _swReg=r; return r; }).catch(function(){ return null; });
+}
+function pushStatus(){
+  if(!pushSupported()) return Promise.resolve('unsupported');
+  if(Notification.permission==='denied') return Promise.resolve('denied');
+  return (_swReg?Promise.resolve(_swReg):registerSW()).then(function(r){
+    if(!r) return 'unsupported';
+    return r.pushManager.getSubscription().then(function(sub){ return sub ? 'on' : 'off'; });
+  });
+}
+function enablePush(){
+  if(!pushSupported()){
+    if(isIOS() && !isStandalone()) return Promise.reject(new Error('באייפון יש להוסיף תחילה את האתר למסך הבית, ואז לפתוח אותו משם'));
+    return Promise.reject(new Error('הדפדפן אינו תומך בהתראות'));
+  }
+  return registerSW().then(function(r){
+    if(!r) throw new Error('לא ניתן להפעיל התראות');
+    return Notification.requestPermission();
+  }).then(function(perm){
+    if(perm!=='granted') throw new Error('ההרשאה להתראות לא ניתנה');
+    return _swReg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: urlB64ToUint8(VAPID_PUBLIC) });
+  }).then(function(sub){
+    var j=sub.toJSON();
+    return callServer('pushSubscribe', App.token, sub.endpoint, j.keys.p256dh, j.keys.auth);
+  });
+}
+function disablePush(){
+  if(!pushSupported()) return Promise.resolve();
+  return (_swReg?Promise.resolve(_swReg):registerSW()).then(function(r){
+    if(!r) return; return r.pushManager.getSubscription();
+  }).then(function(sub){
+    if(!sub) return;
+    var ep=sub.endpoint;
+    return sub.unsubscribe().then(function(){ return callServer('pushUnsubscribe', App.token, ep).catch(function(){}); });
+  });
+}
+try { if('serviceWorker' in navigator) registerSW(); } catch(e){}
+
 
 /* מיפוי הפעולות של האתר אל פונקציות השרת, עם שמות הפרמטרים לפי הסדר */
 var RPC_MAP = {
@@ -791,6 +848,11 @@ var RPC_MAP = {
   adminSaveCommander:  ['admin_save_commander',  ['p_token','p_id','p_name','p_rank','p_personal','p_role','p_classes','p_password']],
   adminSetCmdPassword: ['admin_set_commander_password', ['p_token','p_id','p_password']],
   adminSetCmdActive:   ['admin_set_commander_active', ['p_token','p_id','p_active']],
+  pushSubscribe:       ['push_subscribe',        ['p_token','p_endpoint','p_p256dh','p_auth']],
+  pushUnsubscribe:     ['push_unsubscribe',      ['p_token','p_endpoint']],
+  studentSetReminders: ['student_set_reminders', ['p_token','p_on']],
+  studentRemindersState:['student_reminders_state', ['p_token']],
+  commanderPush:       ['commander_push',        ['p_token','p_class','p_title','p_body']],
   equipCatalog:        ['equipment_catalog',     ['p_token']],
   equipMine:           ['equipment_mine',        ['p_token']],
   equipDeclare:        ['equipment_declare',     ['p_token','p_product','p_size','p_qty']],
@@ -1247,6 +1309,51 @@ function checkoutBlock(d){
     + '<div><div style="font-weight:700">דיווח יציאה פתוח</div><div class="muted" style="font-size:13px">בסיום היום יש לדווח יציאה</div></div>'
     + '<button class="btn gold" id="checkoutBtn">אישור יציאה</button></div></div>';
 }
+function openReminders(){
+  var host=el('modalHost');
+  host.innerHTML='<div class="modal-bg" id="rmbg"><div class="modal"><div class="m-body center">'+spinner()+'</div></div></div>';
+  Promise.all([ callServer('studentRemindersState', App.token).catch(function(){return {wants:false};}), pushStatus() ])
+   .then(function(res){ drawReminders(!!(res[0]&&res[0].wants), res[1]); })
+   .catch(function(){ drawReminders(false,'off'); });
+}
+function drawReminders(wants, pstatus){
+  var host=el('modalHost');
+  var iosNote = (isIOS() && !isStandalone())
+    ? '<div class="banner warn" style="margin-bottom:12px">באייפון יש להוסיף תחילה את האתר למסך הבית דרך כפתור השיתוף, ואז לפתוח אותו משם, כדי לקבל התראות.</div>' : '';
+  var body;
+  if(pstatus==='unsupported'){
+    body = iosNote + '<div class="muted">הדפדפן במכשיר זה אינו תומך בהתראות פוש.</div>';
+  } else if(pstatus==='denied'){
+    body = '<div class="banner warn">ההרשאה להתראות נחסמה בהגדרות הדפדפן. יש לאפשר התראות לאתר זה כדי לקבל תזכורות.</div>';
+  } else {
+    var on = (pstatus==='on');
+    body = iosNote
+      + '<div class="drow"><span>קבלת התראות במכשיר זה</span><b>'+(on?'פעיל':'כבוי')+'</b></div>'
+      + '<div class="drow"><span>תזכורת דיווח יומית</span><b>'+(wants?'מופעל':'כבוי')+'</b></div>'
+      + '<div class="m-actions">'
+      + (on ? '<button class="btn ghost" id="rmDisable">כיבוי התראות במכשיר</button>' : '<button class="btn gold" id="rmEnable">הפעלת התראות במכשיר</button>')
+      + (wants ? '<button class="btn ghost" id="rmStop">ביטול תזכורת יומית</button>' : '<button class="btn gold" id="rmStart">קבלת תזכורת יומית</button>')
+      + '</div>'
+      + '<div class="muted" style="font-size:13px;margin-top:8px">התזכורת נשלחת בבוקר רק אם ההתראות מופעלות במכשיר וגם התזכורת היומית מסומנת.</div>';
+  }
+  host.innerHTML='<div class="modal-bg" id="rmbg"><div class="modal"><div class="m-body">'
+    + '<h3>תזכורות דיווח</h3>'+body
+    + '<div class="m-actions"><button class="btn ghost" id="rmClose">סגירה</button></div></div></div></div>';
+  el('rmClose').addEventListener('click', closeModal);
+  el('rmbg').addEventListener('click', function(e){ if(e.target===el('rmbg')) closeModal(); });
+  if(el('rmEnable')) el('rmEnable').addEventListener('click', function(){ var b=el('rmEnable'); b.disabled=true; b.textContent='מפעיל';
+    enablePush().then(function(){ toast('התראות הופעלו'); openReminders(); }).catch(function(e){ b.disabled=false; b.textContent='הפעלת התראות במכשיר'; toast(e.message,true); }); });
+  if(el('rmDisable')) el('rmDisable').addEventListener('click', function(){ var b=el('rmDisable'); b.disabled=true;
+    disablePush().then(function(){ toast('התראות כובו'); openReminders(); }).catch(function(){ b.disabled=false; }); });
+  if(el('rmStart')) el('rmStart').addEventListener('click', function(){ var b=el('rmStart'); b.disabled=true;
+    var go=function(){ callServer('studentSetReminders', App.token, true).then(function(){ toast('תזכורת יומית הופעלה'); openReminders(); }).catch(function(e){ b.disabled=false; toast(e.message,true); }); };
+    // ודא שהתראות מופעלות קודם
+    pushStatus().then(function(st){ if(st==='on') go(); else enablePush().then(go).catch(function(e){ b.disabled=false; toast(e.message,true); }); });
+  });
+  if(el('rmStop')) el('rmStop').addEventListener('click', function(){ var b=el('rmStop'); b.disabled=true;
+    callServer('studentSetReminders', App.token, false).then(function(){ toast('תזכורת יומית בוטלה'); openReminders(); }).catch(function(e){ b.disabled=false; toast(e.message,true); }); });
+}
+
 function bindCheckout_(){
   if(el('checkoutBtn')) el('checkoutBtn').addEventListener('click', function(){
     var b=el('checkoutBtn'); b.disabled=true; b.textContent='שולח';
@@ -1341,13 +1448,15 @@ function infoStrip(d){
 
   var strip = cards.length ? '<div class="info-strip">'+cards.join('')+'</div>' : '';
   strip += '<div class="personal-actions"><button class="btn ghost" id="myLogBtn">יומן חודשי</button>'
-    + (d.equipmentVisible ? '<button class="btn ghost" id="myEquipBtn">אפסנאות</button>' : '') + '</div>';
+    + (d.equipmentVisible ? '<button class="btn ghost" id="myEquipBtn">אפסנאות</button>' : '')
+    + '<button class="btn ghost" id="remindBtn">תזכורות דיווח</button></div>';
   return strip;
 }
 
 function bindMyLog_(){
   if(el('myLogBtn')) el('myLogBtn').addEventListener('click', function(){ openMonthLog(null, false); });
   if(el('myEquipBtn')) el('myEquipBtn').addEventListener('click', toggleMyEquip);
+  if(el('remindBtn')) el('remindBtn').addEventListener('click', openReminders);
   bindCheckout_();
 }
 function toggleMyEquip(){
@@ -1728,6 +1837,7 @@ function renderClassPane(){
     '<div class="panel"><div class="head">'
     + '<div><h2>כיתה '+esc(c.cls)+'</h2><div class="sub" style="margin-top:6px">'+classSummary(c)+'</div>'
       + (ok ? '<button class="btn ghost sm" id="coToggleBtn" style="margin-top:10px">'+(c.checkoutEnabled?'סגירת דיווח יציאה':'פתיחת דיווח יציאה')+'</button>' : '')
+      + (ok ? '<button class="btn ghost sm" id="pushBtn" style="margin-top:10px;margin-inline-start:8px">שליחת הודעה</button>' : '')
       + '</div>'
     + cutoffCtl + '</div>'
     + '<div class="body" style="padding:16px 24px;border-bottom:1px solid var(--line-2)">'
@@ -1752,6 +1862,7 @@ function renderClassPane(){
     b.addEventListener('click', function(){ openNadon(b.getAttribute('data-id')); });
   });
   bindCheckoutApprove_();
+  if(el('pushBtn')) el('pushBtn').addEventListener('click', function(){ openClassPush(c.cls); });
   if(el('coToggleBtn')) el('coToggleBtn').addEventListener('click', function(){
     var c=cmdState.data.classes[cmdState.active]; var cur=!!c.checkoutEnabled; var next=!cur;
     c.checkoutEnabled=next; var b=el('coToggleBtn'); b.textContent=next?'סגירת דיווח יציאה':'פתיחת דיווח יציאה';
@@ -2994,6 +3105,27 @@ function equipIssueForm(cls, preId, reopen){
 var mgState = { students: [], classes: [], filter: '', equipVisible: false };
 
 var mcState = { commanders:[], classes:[], roles:[], myRole:'', filter:'' };
+
+function openClassPush(cls){
+  var host=el('modalHost');
+  host.innerHTML='<div class="modal-bg" id="cpbg"><div class="modal"><div class="m-body">'
+    + '<h3>שליחת הודעה לכיתה '+esc(cls)+'</h3>'
+    + '<div class="muted" style="font-size:13px;margin-bottom:10px">ההודעה תישלח כהתראה לשוחרי הכיתה שאישרו קבלת התראות.</div>'
+    + '<label>כותרת</label><input id="cpTitle" placeholder="נושא ההודעה" maxlength="60">'
+    + '<label style="margin-top:10px">תוכן</label><textarea id="cpBody" rows="3" placeholder="תוכן ההודעה" maxlength="300"></textarea>'
+    + '<div class="m-actions"><button class="btn gold" id="cpSend">שליחה</button><button class="btn ghost" id="cpCancel">ביטול</button></div>'
+    + '</div></div></div>';
+  el('cpCancel').addEventListener('click', closeModal);
+  el('cpbg').addEventListener('click', function(e){ if(e.target===el('cpbg')) closeModal(); });
+  el('cpSend').addEventListener('click', function(){
+    var t=el('cpTitle').value.trim(), bd=el('cpBody').value.trim();
+    if(!t||!bd){ toast('יש למלא כותרת ותוכן', true); return; }
+    var b=el('cpSend'); b.disabled=true; b.textContent='שולח';
+    callServer('commanderPush', App.token, cls, t, bd).then(function(){
+      toast('ההודעה נשלחה לכיתה '+cls); closeModal();
+    }).catch(function(e){ b.disabled=false; b.textContent='שליחה'; toast(e.message,true); });
+  });
+}
 
 function openManageCmd(){
   var host=el('modalHost');
