@@ -767,6 +767,7 @@ var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 var VAPID_PUBLIC = 'BGxeIbP_hoLKgHJMPUEehUdyP0u1CGGmZNT9rswmlsC_2YciPKqv8IMI3BKGcMoVT4TuqXXQvpGF79T7ksZrFs4';
 
 var _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+function flushPush(){ try { return _sb.functions.invoke('push').then(function(){}).catch(function(){}); } catch(e){ return Promise.resolve(); } }
 
 /* ============ התראות פוש (Web Push) ============ */
 var _swReg = null;
@@ -3122,6 +3123,7 @@ function openClassPush(cls){
     if(!t||!bd){ toast('יש למלא כותרת ותוכן', true); return; }
     var b=el('cpSend'); b.disabled=true; b.textContent='שולח';
     callServer('commanderPush', App.token, cls, t, bd).then(function(){
+      flushPush();
       toast('ההודעה נשלחה לכיתה '+cls); closeModal();
     }).catch(function(e){ b.disabled=false; b.textContent='שליחה'; toast(e.message,true); });
   });
