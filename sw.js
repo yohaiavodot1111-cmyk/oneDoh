@@ -10,7 +10,11 @@ self.addEventListener('push', function(event){
     body: data.body || '',
     dir: 'rtl',
     lang: 'he',
-    tag: data.tag || 'dohehad',
+    tag: data.tag || ('dohehad-'+Date.now()),
+    renotify: true,
+    requireInteraction: true,
+    icon: 'icon-192.png',
+    badge: 'icon-192.png',
     data: { url: data.url || '/' }
   };
   event.waitUntil(self.registration.showNotification(title, opts));
