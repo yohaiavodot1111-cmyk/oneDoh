@@ -677,6 +677,27 @@
   @media(max-width:560px){ .chk-grid{ grid-template-columns:repeat(3,1fr); } }
   .chk{ display:flex; align-items:center; gap:6px; font-size:14px; background:var(--paper); border:1px solid var(--line); border-radius:8px; padding:7px 9px; cursor:pointer; }
   .chk input{ width:auto; }
+  /* הודעות: מודאל אישור קריאה לשוחר */
+  .ack-bg{ z-index:80; }
+  .ack-modal{ max-width:520px; }
+  .ack-top{ display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+  .ack-ic{ width:44px; height:44px; border-radius:12px; background:var(--sky-soft); color:var(--navy); display:flex; align-items:center; justify-content:center; }
+  .ack-ic svg{ width:24px; height:24px; }
+  .ack-list{ display:flex; flex-direction:column; gap:12px; max-height:52vh; overflow:auto; }
+  .ackcard{ border:1px solid var(--line); border-inline-start:4px solid var(--blue); border-radius:12px; padding:14px 16px; background:var(--paper); }
+  .ack-h{ font-family:var(--display); font-weight:700; font-size:17px; color:var(--navy); }
+  .ack-b{ font-size:15px; margin-top:6px; line-height:1.5; }
+  .ack-meta{ font-size:12px; color:var(--muted); margin-top:8px; }
+  /* פאנל הודעות למפקד */
+  .msg-list{ display:flex; flex-direction:column; gap:12px; }
+  .msg-card{ border:1px solid var(--line); border-radius:12px; padding:14px 16px; background:#fff; box-shadow:var(--shadow-sm); }
+  .msg-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+  .msg-title{ font-family:var(--display); font-weight:700; font-size:16px; color:var(--navy); }
+  .msg-acts{ display:flex; gap:6px; flex:0 0 auto; }
+  .msg-body{ font-size:14.5px; margin-top:6px; line-height:1.5; }
+  .msg-meta{ font-size:12px; color:var(--muted); margin-top:8px; }
+  .msg-stat{ margin-top:8px; font-size:14px; color:var(--navy); }
+  .msg-sub{ font-size:12.5px; color:var(--muted); margin-top:3px; }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -854,6 +875,11 @@ var RPC_MAP = {
   studentSetReminders: ['student_set_reminders', ['p_token','p_on']],
   studentRemindersState:['student_reminders_state', ['p_token']],
   commanderPush:       ['commander_push',        ['p_token','p_class','p_title','p_body']],
+  studentMessages:     ['student_messages',      ['p_token']],
+  studentAckMessage:   ['student_ack_message',   ['p_token','p_id']],
+  commanderMessages:   ['commander_messages',    ['p_token','p_class']],
+  commanderEditMessage:['commander_edit_message',['p_token','p_id','p_title','p_body']],
+  commanderDeleteMessage:['commander_delete_message',['p_token','p_id']],
   equipCatalog:        ['equipment_catalog',     ['p_token']],
   equipMine:           ['equipment_mine',        ['p_token']],
   equipDeclare:        ['equipment_declare',     ['p_token','p_product','p_size','p_qty']],
@@ -1018,6 +1044,32 @@ function heDateTime_(){
 function tickClock_(){ var t=el('nowTime'), dd=el('nowDate'); if(!t||!dd){ return; } var v=heDateTime_(); t.textContent=v.time; dd.textContent=v.date; }
 function startClock_(){ tickClock_(); if(_clockTick) clearInterval(_clockTick); _clockTick=setInterval(tickClock_, 15000); }
 function stopClock_(){ if(_clockTick){ clearInterval(_clockTick); _clockTick=null; } }
+function checkMessages(){
+  callServer('studentMessages', App.token).then(function(d){
+    var msgs = (d && d.messages) || [];
+    if(msgs.length) showAckModal(msgs);
+  }).catch(function(){});
+}
+function showAckModal(msgs){
+  var host=el('modalHost');
+  var cards = msgs.map(function(m){
+    return '<div class="ackcard"><div class="ack-h">'+esc(m.title)+'</div>'
+      + '<div class="ack-b">'+esc(m.body).replace(/\n/g,'<br>')+'</div>'
+      + '<div class="ack-meta">'+esc(m['from']||'')+' | '+esc(m.date)+' '+esc(m.time)+'</div></div>';
+  }).join('');
+  host.innerHTML='<div class="modal-bg ack-bg" id="ackbg"><div class="modal ack-modal"><div class="m-body">'
+    + '<div class="ack-top"><div class="ack-ic">'+ic('present')+'</div>'
+    +   '<div><h3 style="margin:0">הודעה מהמפקד</h3>'
+    +   '<div class="muted" style="font-size:13px">'+(msgs.length>1?('יש '+msgs.length+' הודעות לקריאה'):'יש הודעה חדשה')+'</div></div></div>'
+    + '<div class="ack-list">'+cards+'</div>'
+    + '<div class="m-actions"><button class="btn gold" id="ackBtn" style="width:100%">אישור קריאה</button></div>'
+    + '</div></div></div>';
+  el('ackBtn').addEventListener('click', function(){
+    var b=el('ackBtn'); b.disabled=true; b.textContent='מאשר';
+    callServer('studentAckMessage', App.token, null).then(function(){ closeModal(); toast('ההודעה אושרה'); })
+      .catch(function(e){ b.disabled=false; b.textContent='אישור קריאה'; toast(e.message,true); });
+  });
+}
 function enterPortal(){
   if(!App.token || !App.profile){ return; }
   el('login').classList.add('hidden'); el('portal').classList.remove('hidden');
@@ -1037,6 +1089,7 @@ function enterPortal(){
   startClock_();
   route(true);
   startPolling();
+  if(p.kind==='student') checkMessages();
   if(App.fromCache){ App.fromCache = false; refreshNow_(); }
 }
 el('logoutBtn').addEventListener('click', function(){
@@ -1839,6 +1892,7 @@ function renderClassPane(){
     + '<div><h2>כיתה '+esc(c.cls)+'</h2><div class="sub" style="margin-top:6px">'+classSummary(c)+'</div>'
       + (ok ? '<button class="btn ghost sm" id="coToggleBtn" style="margin-top:10px">'+(c.checkoutEnabled?'סגירת דיווח יציאה':'פתיחת דיווח יציאה')+'</button>' : '')
       + (ok ? '<button class="btn ghost sm" id="pushBtn" style="margin-top:10px;margin-inline-start:8px">שליחת הודעה</button>' : '')
+      + (ok ? '<button class="btn ghost sm" id="msgsBtn" style="margin-top:10px;margin-inline-start:8px">הודעות שנשלחו</button>' : '')
       + '</div>'
     + cutoffCtl + '</div>'
     + '<div class="body" style="padding:16px 24px;border-bottom:1px solid var(--line-2)">'
@@ -1864,6 +1918,7 @@ function renderClassPane(){
   });
   bindCheckoutApprove_();
   if(el('pushBtn')) el('pushBtn').addEventListener('click', function(){ openClassPush(c.cls); });
+  if(el('msgsBtn')) el('msgsBtn').addEventListener('click', function(){ openClassMessages(c.cls); });
   if(el('coToggleBtn')) el('coToggleBtn').addEventListener('click', function(){
     var c=cmdState.data.classes[cmdState.active]; var cur=!!c.checkoutEnabled; var next=!cur;
     c.checkoutEnabled=next; var b=el('coToggleBtn'); b.textContent=next?'סגירת דיווח יציאה':'פתיחת דיווח יציאה';
@@ -3106,6 +3161,62 @@ function equipIssueForm(cls, preId, reopen){
 var mgState = { students: [], classes: [], filter: '', equipVisible: false };
 
 var mcState = { commanders:[], classes:[], roles:[], myRole:'', filter:'' };
+
+function openClassMessages(cls){
+  var host=el('modalHost');
+  host.innerHTML='<div class="modal-bg" id="cmbg"><div class="modal" style="max-width:720px;max-height:92vh;overflow:auto"><div class="m-body center">'+spinner()+'</div></div></div>';
+  callServer('commanderMessages', App.token, cls).then(function(d){ drawClassMessages(cls, (d&&d.messages)||[]); })
+    .catch(function(e){ closeModal(); toast(e.message,true); });
+}
+function drawClassMessages(cls, msgs){
+  var host=el('modalHost');
+  var rows = msgs.map(function(m){
+    var pendTxt = (m.pending&&m.pending.length) ? esc(m.pending.join(', ')) : 'כולם אישרו';
+    var ackList = (m.acked&&m.acked.length) ? m.acked.map(function(a){ return esc(a.name)+' ('+esc(a.at)+')'; }).join(', ') : 'אין עדיין';
+    return '<div class="msg-card">'
+      + '<div class="msg-head"><div class="msg-title">'+esc(m.title)+'</div>'
+      +   '<div class="msg-acts"><button class="btn slim xs cm-edit" data-id="'+m.id+'">עריכה</button>'
+      +   '<button class="btn ghost xs cm-del" data-id="'+m.id+'">מחיקה</button></div></div>'
+      + '<div class="msg-body">'+esc(m.body).replace(/\n/g,"<br>")+'</div>'
+      + '<div class="msg-meta">'+esc(m['from']||'')+' | '+esc(m.created_at)+'</div>'
+      + '<div class="msg-stat"><b>אישרו קריאה '+m.ackCount+' מתוך '+m.total+'</b></div>'
+      + '<div class="msg-sub">אישרו: '+ackList+'</div>'
+      + '<div class="msg-sub">ממתינים: '+pendTxt+'</div>'
+      + '</div>';
+  }).join('') || '<div class="muted center" style="padding:26px">לא נשלחו הודעות לכיתה זו</div>';
+  host.innerHTML='<div class="modal-bg" id="cmbg"><div class="modal" style="max-width:720px;max-height:92vh;overflow:auto">'
+    + '<div class="dhead"><div><div class="dname">הודעות כיתה '+esc(cls)+'</div></div>'
+    +   '<button class="btn ghost sm" id="cmClose">סגירה</button></div>'
+    + '<div class="m-body"><div class="mg-toolbar"><button class="btn gold" id="cmNew">שליחת הודעה חדשה</button></div>'
+    + '<div class="msg-list" style="margin-top:12px">'+rows+'</div></div></div></div>';
+  el('cmClose').addEventListener('click', closeModal);
+  el('cmbg').addEventListener('click', function(e){ if(e.target===el('cmbg')) closeModal(); });
+  el('cmNew').addEventListener('click', function(){ openClassPush(cls); });
+  host.querySelectorAll('.cm-edit').forEach(function(b){ b.addEventListener('click', function(){ editMessage(cls, +b.getAttribute('data-id'), msgs); }); });
+  host.querySelectorAll('.cm-del').forEach(function(b){ b.addEventListener('click', function(){
+    if(!confirm('למחוק את ההודעה?')) return; b.disabled=true;
+    callServer('commanderDeleteMessage', App.token, +b.getAttribute('data-id')).then(function(){ toast('ההודעה נמחקה'); openClassMessages(cls); })
+      .catch(function(e){ b.disabled=false; toast(e.message,true); });
+  }); });
+}
+function editMessage(cls, id, msgs){
+  var m=(msgs||[]).filter(function(x){return x.id===id;})[0]||{title:'',body:''};
+  var host=el('modalHost');
+  host.innerHTML='<div class="modal-bg" id="embg"><div class="modal"><div class="m-body">'
+    + '<h3>עריכת הודעה</h3>'
+    + '<label>כותרת</label><input id="emTitle" value="'+esc(m.title)+'" maxlength="60">'
+    + '<label style="margin-top:10px">תוכן</label><textarea id="emBody" rows="3" maxlength="300">'+esc(m.body)+'</textarea>'
+    + '<div class="m-actions"><button class="btn gold" id="emSave">שמירה</button><button class="btn ghost" id="emCancel">ביטול</button></div>'
+    + '</div></div></div>';
+  el('emCancel').addEventListener('click', function(){ openClassMessages(cls); });
+  el('emSave').addEventListener('click', function(){
+    var t=el('emTitle').value.trim(), bd=el('emBody').value.trim();
+    if(!t||!bd){ toast('יש למלא כותרת ותוכן', true); return; }
+    var b=el('emSave'); b.disabled=true; b.textContent='שומר';
+    callServer('commanderEditMessage', App.token, id, t, bd).then(function(){ toast('ההודעה עודכנה'); openClassMessages(cls); })
+      .catch(function(e){ b.disabled=false; b.textContent='שמירה'; toast(e.message,true); });
+  });
+}
 
 function openClassPush(cls){
   var host=el('modalHost');
