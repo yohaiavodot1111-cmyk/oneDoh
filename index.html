@@ -698,6 +698,12 @@
   .msg-meta{ font-size:12px; color:var(--muted); margin-top:8px; }
   .msg-stat{ margin-top:8px; font-size:14px; color:var(--navy); }
   .msg-sub{ font-size:12.5px; color:var(--muted); margin-top:3px; }
+  /* חיווי חוסר נתונים בניהול שוחרים */
+  .mg-row.mg-missing{ border-inline-start:3px solid var(--late); }
+  .mg-warn{ display:flex; align-items:center; gap:6px; margin-top:6px; color:var(--late); font-size:12.5px; font-weight:700; }
+  .mg-warn svg{ width:15px; height:15px; }
+  .mg-warn-inline{ color:var(--absent); font-weight:700; }
+  .mg-gmiss{ display:inline-block; margin-inline-start:8px; background:#FBF1DC; color:var(--late); font-weight:700; font-size:11.5px; padding:1px 8px; border-radius:20px; }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -3355,6 +3361,12 @@ function openManage(){
   }).catch(function(e){ closeModal(); toast(e.message, true); });
 }
 
+function missingOf(st){
+  var miss=[];
+  if(!(st.personal_number||'').trim() && !(st.national_id||'').trim()) miss.push('מספר אישי או תעודת זהות');
+  if(!(st.birth_date||'').trim()) miss.push('תאריך לידה');
+  return miss;
+}
 function drawManage(){
   var host = el('modalHost');
   var f = mgState.filter.trim();
@@ -3367,7 +3379,8 @@ function drawManage(){
 
   // סינון לכיתה נבחרת ולחיפוש
   var list = mgState.students.filter(function(st){
-    return matches(st) && (mgState.classFilter === 'all' || st.class_name === mgState.classFilter);
+    return matches(st) && (mgState.classFilter === 'all' || st.class_name === mgState.classFilter)
+      && (!mgState.onlyMissing || missingOf(st).length>0);
   });
 
   // קיבוץ לפי כיתה, לפי סדר הכיתות במערכת
@@ -3377,10 +3390,13 @@ function drawManage(){
   order.forEach(function(c){ if(!groups[c]) return; groups[c].sort(function(a,b){ return (a.last_name+a.first_name).localeCompare(b.last_name+b.first_name,'he'); }); });
 
   function studentCard(st){
-    var idline = st.personal_number ? ('מ.א '+esc(st.personal_number)) : ('ת.ז '+esc(st.national_id));
-    return '<div class="mg-row'+(st.active?'':' mg-off')+'">'
-      + '<div class="mg-main"><div class="mg-name">'+esc(st.first_name+' '+st.last_name)+(st.active?'':' <span class="mg-badge">לא פעיל</span>')+'</div>'
-      + '<div class="mg-sub">'+idline+'</div></div>'
+    var idline = st.personal_number ? ('מ.א '+esc(st.personal_number)) : (st.national_id ? ('ת.ז '+esc(st.national_id)) : '');
+    var miss = missingOf(st);
+    var warn = miss.length ? '<div class="mg-warn">'+ic('ban')+'<span>חסר: '+esc(miss.join(', '))+'</span></div>' : '';
+    var nameBadge = st.active ? '' : ' <span class="mg-badge">לא פעיל</span>';
+    return '<div class="mg-row'+(st.active?'':' mg-off')+(miss.length?' mg-missing':'')+'">'
+      + '<div class="mg-main"><div class="mg-name">'+esc(st.first_name+' '+st.last_name)+nameBadge+'</div>'
+      + '<div class="mg-sub">'+(idline||'<span class="mg-warn-inline">ללא מזהה</span>')+'</div>'+warn+'</div>'
       + '<div class="mg-acts">'
       + '<button class="btn slim sm mg-edit" data-id="'+esc(st.id)+'">עריכה</button>'
       + '<button class="btn '+(st.active?'ghost':'gold')+' sm mg-toggle" data-id="'+esc(st.id)+'" data-active="'+(st.active?'1':'0')+'">'+(st.active?'השבתה':'הפעלה')+'</button>'
@@ -3394,9 +3410,11 @@ function drawManage(){
     body = shown.map(function(c){
       var g = groups[c];
       var activeN = g.filter(function(x){return x.active;}).length;
+      var missN = g.filter(function(x){return missingOf(x).length;}).length;
+      var missTag = missN ? '<span class="mg-gmiss">'+missN+' חסרי נתונים</span>' : '';
       return '<div class="mg-group">'
         + '<div class="mg-ghead"><span class="mg-gname">כיתה '+esc(c)+'</span>'
-        +   '<span class="mg-gcount">'+activeN+' פעילים'+(g.length>activeN?(' | '+(g.length-activeN)+' לא פעילים'):'')+'</span></div>'
+        +   '<span class="mg-gcount">'+activeN+' פעילים'+(g.length>activeN?(' | '+(g.length-activeN)+' לא פעילים'):'')+missTag+'</span></div>'
         + '<div class="mg-glist">'+g.map(studentCard).join('')+'</div></div>';
     }).join('');
   }
@@ -3416,6 +3434,7 @@ function drawManage(){
     + '<div class="mg-toolbar">'
     +   '<button class="btn gold" id="mgAdd">הוספת שוחר</button>'
     +   '<button class="btn '+(mgState.equipVisible?'gold':'ghost')+'" id="mgEquip">'+(mgState.equipVisible?'אפסנאות מוצגת לשוחרים':'אפסנאות מוסתרת מהשוחרים')+'</button>'
+    +   '<button class="btn '+(mgState.onlyMissing?'gold':'ghost')+'" id="mgMissing">'+(mgState.onlyMissing?'מציג חסרי נתונים':'הצג רק חסרי נתונים')+'</button>'
     + '</div>'
     + '<input id="mgSearch" placeholder="חיפוש לפי שם או מספר" value="'+esc(mgState.filter)+'" style="margin:12px 0">'
     + '<div class="mg-chips">'+chips+'</div>'
@@ -3424,6 +3443,7 @@ function drawManage(){
 
   el('mgClose').addEventListener('click', closeModal);
   host.querySelectorAll('.mg-chip').forEach(function(ch){ ch.addEventListener('click', function(){ mgState.classFilter = ch.getAttribute('data-c'); drawManage(); }); });
+  if(el('mgMissing')) el('mgMissing').addEventListener('click', function(){ mgState.onlyMissing = !mgState.onlyMissing; drawManage(); });
   el('mgbg').addEventListener('click', function(e){ if(e.target===el('mgbg')) closeModal(); });
   var si = el('mgSearch');
   si.addEventListener('input', function(){ mgState.filter = si.value; var pos=si.selectionStart; drawManage(); var n=el('mgSearch'); n.focus(); n.setSelectionRange(pos,pos); });
