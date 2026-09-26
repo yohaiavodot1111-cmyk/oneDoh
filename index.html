@@ -886,6 +886,7 @@ var RPC_MAP = {
   commanderMessages:   ['commander_messages',    ['p_token','p_class']],
   commanderEditMessage:['commander_edit_message',['p_token','p_id','p_title','p_body']],
   commanderDeleteMessage:['commander_delete_message',['p_token','p_id']],
+  historyExport:       ['history_export',        ['p_token']],
   equipCatalog:        ['equipment_catalog',     ['p_token']],
   equipMine:           ['equipment_mine',        ['p_token']],
   equipDeclare:        ['equipment_declare',     ['p_token','p_product','p_size','p_qty']],
@@ -1714,6 +1715,7 @@ function paintCommander(d){
         + (canFuture ? '<button class="btn ghost" id="lockBtn">'+((d.dayLock&&d.dayLock.locked)?'ביטול נעילת היום':'נעילת היום')+'</button>' : '')
         + (canFuture ? '<button class="btn ghost" id="manageBtn">ניהול שוחרים</button>' : '')
         + ((p.role==='ראש צוות'||p.role==='מפקד שלוחה') ? '<button class="btn ghost" id="manageCmdBtn">ניהול מדריכים</button>' : '')
+        + ((p.role==='ראש צוות'||p.role==='מפקד שלוחה') ? '<button class="btn ghost" id="backupBtn">גיבוי היסטוריה</button>' : '')
         + (eqOn ? '<button class="btn ghost" id="ordersBtn">תכלול הזמנות</button>' : '')
         + '</div>'
       : '';
@@ -1742,6 +1744,7 @@ function bindCmdTop(){
   if(el('bulkBtn')) el('bulkBtn').addEventListener('click', openBulk);
   if(el('manageBtn')) el('manageBtn').addEventListener('click', openManage);
   if(el('manageCmdBtn')) el('manageCmdBtn').addEventListener('click', openManageCmd);
+  if(el('backupBtn')) el('backupBtn').addEventListener('click', function(){ downloadHistoryExcel(el('backupBtn')); });
   if(el('ordersBtn')) el('ordersBtn').addEventListener('click', function(){ downloadOrdersExcel(el('ordersBtn')); });
   if(el('lockBtn')) el('lockBtn').addEventListener('click', function(){
     var locked = !!(cmdState.data && cmdState.data.dayLock && cmdState.data.dayLock.locked);
@@ -2369,6 +2372,81 @@ function exportExcel_(data){
 }
 
 /* אקסל תכלול הזמנות אפסנאות פתוחות: גיליון סיכום וגיליון לפי כיתה */
+function downloadHistoryExcel(btn){
+  if(btn){ btn.disabled=true; btn.textContent='מכין גיבוי'; }
+  callServer('historyExport', App.token).then(function(d){
+    try { buildHistoryExcel(d); } catch(e){ toast('הפקת הגיבוי נכשלה', true); }
+    if(btn){ btn.disabled=false; btn.textContent='גיבוי היסטוריה'; }
+  }).catch(function(e){ if(btn){ btn.disabled=false; btn.textContent='גיבוי היסטוריה'; } toast(e.message,true); });
+}
+
+function buildHistoryExcel(d){
+  var wb = new ExcelJS.Workbook();
+  var navy='FF0B3D66', head='FF2F6EA8', line='FFB9C8D6', soft='FFEAF4FB';
+  var border={ top:{style:'thin',color:{argb:line}}, left:{style:'thin',color:{argb:line}},
+               bottom:{style:'thin',color:{argb:line}}, right:{style:'thin',color:{argb:line}} };
+  function headRow(ws, arr){ var r=ws.addRow(arr); r.eachCell(function(c){ c.font={bold:true,color:{argb:'FFFFFFFF'}};
+    c.fill={type:'pattern',pattern:'solid',fgColor:{argb:navy}}; c.alignment={horizontal:'center',vertical:'middle'}; c.border=border; }); r.height=20; return r; }
+  function monTitle(mon){ var p=mon.split('-'); var names=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר']; return names[(+p[1])-1]+' '+p[0]; }
+
+  var rows = d.rows||[], summary = d.summary||[], classes = d.classes||[];
+
+  // גיליון סקירה כללית
+  var ov = wb.addWorksheet('סקירה כללית', { views:[{rightToLeft:true}] });
+  ov.columns=[{width:10},{width:14},{width:10},{width:10},{width:10},{width:10},{width:10}];
+  ov.mergeCells(1,1,1,7); var t=ov.getCell(1,1); t.value='דוח אחד, גיבוי היסטוריה   '+d.generatedAt;
+  t.font={bold:true,size:16,color:{argb:navy}}; t.alignment={horizontal:'center'}; ov.getRow(1).height=26;
+  headRow(ov, ['כיתה','חודש','נוכחים','מאחרים','נעדרים','בחופשה','סה"כ']);
+  summary.forEach(function(g){ var r=ov.addRow([g.cls, monTitle(g.ym), g.present, g.late, g.absent, g.leave, g.total]);
+    r.eachCell(function(c){ c.border=border; c.alignment={horizontal:'center'}; }); });
+  if(!summary.length) ov.addRow(['אין נתונים','','','','','','']);
+
+  // גיליון לכל כיתה
+  classes.forEach(function(cls){
+    var cr = rows.filter(function(x){return x.cls===cls;});
+    var safe = String(cls).replace(/[\\\/\?\*\[\]:]/g,' ').slice(0,28) || 'כיתה';
+    var ws = wb.addWorksheet(safe, { views:[{rightToLeft:true}] });
+    ws.columns=[{width:22},{width:12},{width:9},{width:14},{width:22},{width:10},{width:10}];
+    ws.mergeCells(1,1,1,7); var h=ws.getCell(1,1); h.value='כיתה '+cls; h.font={bold:true,size:15,color:{argb:navy}};
+    h.alignment={horizontal:'center'}; ws.getRow(1).height=24;
+
+    // סיכום חודשי לכיתה
+    var cs = summary.filter(function(g){return g.cls===cls;});
+    if(cs.length){
+      var sh=ws.addRow(['סיכום חודשי']); ws.mergeCells(sh.number,1,sh.number,7);
+      ws.getCell(sh.number,1).font={bold:true,color:{argb:navy}}; ws.getCell(sh.number,1).fill={type:'pattern',pattern:'solid',fgColor:{argb:soft}};
+      headRow(ws, ['חודש','נוכחים','מאחרים','נעדרים','בחופשה','סה"כ','']);
+      cs.forEach(function(g){ var r=ws.addRow([monTitle(g.ym), g.present, g.late, g.absent, g.leave, g.total, '']);
+        r.eachCell(function(c,i){ if(i<=6){ c.border=border; c.alignment={horizontal:'center'}; } }); });
+      ws.addRow([]);
+    }
+
+    // פירוט מלא, מקובץ לפי חודש
+    var months = {}; cr.forEach(function(x){ (months[x.ym]=months[x.ym]||[]).push(x); });
+    Object.keys(months).sort().forEach(function(m){
+      var mh=ws.addRow([monTitle(m)]); ws.mergeCells(mh.number,1,mh.number,7);
+      ws.getCell(mh.number,1).font={bold:true,color:{argb:'FFFFFFFF'}}; ws.getCell(mh.number,1).fill={type:'pattern',pattern:'solid',fgColor:{argb:head}};
+      ws.getCell(mh.number,1).alignment={horizontal:'center'};
+      headRow(ws, ['שם','תאריך','יום','סטטוס','סיבה','דווח','אושר']);
+      months[m].sort(function(a,b){ return (a.name+a.date).localeCompare(b.name+b.date,'he'); }).forEach(function(x){
+        var r=ws.addRow([x.name, x.date, x.weekday, x.status, x.reason, x.reportedAt, x.approvedAt]);
+        var fill = x.isLate?'FFFBF1DC':(x.isAbsent?'FFFBE3E3':(x.isLeave?'FFEEF1F5':null));
+        r.eachCell(function(c){ c.border=border; c.alignment={horizontal:'center',vertical:'middle'}; if(fill) c.fill={type:'pattern',pattern:'solid',fgColor:{argb:fill}}; });
+        ws.getCell(r.number,1).alignment={horizontal:'right'};
+      });
+      ws.addRow([]);
+    });
+    if(!cr.length) ws.addRow(['אין דיווחים לכיתה זו']);
+  });
+
+  wb.xlsx.writeBuffer().then(function(buf){
+    var blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    var url=URL.createObjectURL(blob); var a=document.createElement('a');
+    a.href=url; a.download='דוח אחד גיבוי היסטוריה '+d.generatedAt.replace(/[\/: ]/g,'-')+'.xlsx';
+    document.body.appendChild(a); a.click(); setTimeout(function(){ a.remove(); URL.revokeObjectURL(url); }, 1500);
+  }).catch(function(){ toast('הפקת הגיבוי נכשלה', true); });
+}
+
 function exportOrdersExcel(d){
   var wb = new ExcelJS.Workbook();
   var navy='FF0B3D66', line='FFB9C8D6';
