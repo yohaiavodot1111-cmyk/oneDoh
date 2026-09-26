@@ -704,6 +704,8 @@
   .mg-warn svg{ width:15px; height:15px; }
   .mg-warn-inline{ color:var(--absent); font-weight:700; }
   .mg-gmiss{ display:inline-block; margin-inline-start:8px; background:#FBF1DC; color:var(--late); font-weight:700; font-size:11.5px; padding:1px 8px; border-radius:20px; }
+  .credit{ text-align:center; color:var(--muted); opacity:.5; font-size:11px; padding:26px 0 18px; letter-spacing:.01em; }
+  @media print{ .credit{ display:none; } }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -777,6 +779,7 @@
     <div id="verNote" style="font-size:12px;color:var(--muted)"></div>
   </div></div>
   <main id="view"></main>
+  <div class="credit">המערכת נבנתה על ידי שמעון בר יוחאי אליהו</div>
 </div>
 
 <div id="modalHost"></div>
@@ -2438,6 +2441,90 @@ function buildHistoryExcel(d){
     });
     if(!cr.length) ws.addRow(['אין דיווחים לכיתה זו']);
   });
+
+  // ===== גיליון נתונים גולמי לכל הדיווחים (משמש את הבחירה לפי שוחר) =====
+  var dataWs = wb.addWorksheet('נתונים', { views:[{rightToLeft:true}] });
+  dataWs.columns=[{width:22},{width:9},{width:12},{width:9},{width:14},{width:22},{width:9},{width:9},{width:9}];
+  headRow(dataWs, ['שם','כיתה','תאריך','חודש','סטטוס','סיבה','מאחר','נעדר','חופשה']);
+  var allRows = rows.slice().sort(function(a,b){ return (a.name+a.date).localeCompare(b.name+b.date,'he'); });
+  allRows.forEach(function(x){
+    dataWs.addRow([x.name, x.cls, x.date, monTitle(x.ym), x.status, x.reason,
+      x.isLate?1:0, x.isAbsent?1:0, x.isLeave?1:0]);
+  });
+  var dataLast = dataWs.rowCount; // כולל שורת הכותרת בשורה 1
+  var namesList = [];
+  allRows.forEach(function(x){ if(namesList.indexOf(x.name)<0) namesList.push(x.name); });
+  namesList.sort(function(a,b){ return a.localeCompare(b,'he'); });
+  var monthsList = []; (summary||[]).forEach(function(g){ if(monthsList.indexOf(g.ym)<0) monthsList.push(g.ym); });
+  rows.forEach(function(x){ if(monthsList.indexOf(x.ym)<0) monthsList.push(x.ym); });
+  monthsList.sort();
+
+  // ===== גיליון אינטראקטיבי: בחירת שוחר וסיכום חודשי =====
+  var pick = wb.addWorksheet('לפי שוחר', { views:[{rightToLeft:true}] });
+  pick.columns=[{width:16},{width:12},{width:12},{width:12},{width:12},{width:12}];
+  pick.mergeCells(1,1,1,6); var pt=pick.getCell(1,1); pt.value='צפייה לפי שוחר';
+  pt.font={bold:true,size:16,color:{argb:navy}}; pt.alignment={horizontal:'center'}; pick.getRow(1).height=26;
+
+  pick.getCell(3,1).value='בחר שוחר:'; pick.getCell(3,1).font={bold:true};
+  var nameCell = pick.getCell(3,2);
+  nameCell.value = namesList[0] || '';
+  nameCell.fill={type:'pattern',pattern:'solid',fgColor:{argb:soft}};
+  nameCell.border=border; nameCell.font={bold:true,color:{argb:navy}};
+  pick.mergeCells(3,2,3,4);
+  // רשימה נפתחת עם כל השמות
+  if(namesList.length){
+    var listStr = '"'+ namesList.map(function(n){return n.replace(/"/g,"'");}).join(',') +'"';
+    // אקסל מגביל רשימה מוטבעת לאורך מסוים, אז אם ארוך מדי נשתמש בהפניה לעמודת עזר
+    if(listStr.length <= 255){
+      pick.getCell(3,2).dataValidation = { type:'list', allowBlank:false, formulae:[listStr], showErrorMessage:true };
+    } else {
+      // עמודת עזר נסתרת בגיליון הנתונים עם השמות הייחודיים
+      var hcol = 11; // עמודה K
+      dataWs.getCell(1,hcol).value='שמות';
+      namesList.forEach(function(n,i){ dataWs.getCell(i+2,hcol).value=n; });
+      dataWs.getColumn(hcol).hidden = true;
+      var ref = "'נתונים'!$K$2:$K$"+(namesList.length+1);
+      pick.getCell(3,2).dataValidation = { type:'list', allowBlank:false, formulae:[ref], showErrorMessage:true };
+    }
+  }
+
+  // כותרת טבלת הסיכום החודשי לשוחר הנבחר
+  headRow(pick, []); // שורה ריקה מעוצבת? לא. במקום, נבנה כותרת ידנית בשורה 5
+  var HR = 5;
+  ['חודש','נוכח','מאחר','נעדר','חופשה','סה"כ'].forEach(function(t,i){
+    var c=pick.getCell(HR,i+1); c.value=t; c.font={bold:true,color:{argb:'FFFFFFFF'}};
+    c.fill={type:'pattern',pattern:'solid',fgColor:{argb:navy}}; c.alignment={horizontal:'center'}; c.border=border;
+  });
+  // שורה לכל חודש עם נוסחאות שמסתכמות מגיליון הנתונים לפי השם הנבחר
+  var nameRef = "'לפי שוחר'!$B$3";
+  var rng = function(col){ return "'נתונים'!$"+col+"$2:$"+col+"$"+dataLast; };
+  monthsList.forEach(function(m, idx){
+    var r = HR+1+idx;
+    pick.getCell(r,1).value = monTitle(m);
+    var monName = monTitle(m);
+    // תנאים: שם תואם וגם חודש תואם
+    var base = "COUNTIFS("+rng("A")+","+nameRef+","+rng("D")+",$A$"+r+")";
+    var lateF = "SUMIFS("+rng("G")+","+rng("A")+","+nameRef+","+rng("D")+",$A$"+r+")";
+    var absF  = "SUMIFS("+rng("H")+","+rng("A")+","+nameRef+","+rng("D")+",$A$"+r+")";
+    var lvF   = "SUMIFS("+rng("I")+","+rng("A")+","+nameRef+","+rng("D")+",$A$"+r+")";
+    pick.getCell(r,3).value = { formula: lateF };
+    pick.getCell(r,4).value = { formula: absF };
+    pick.getCell(r,5).value = { formula: lvF };
+    pick.getCell(r,2).value = { formula: base+"-"+lateF+"-"+absF+"-"+lvF }; // נוכח = סהכ פחות השאר
+    pick.getCell(r,6).value = { formula: base };
+    for(var ci=1;ci<=6;ci++){ var cc=pick.getCell(r,ci); cc.border=border; cc.alignment={horizontal:'center'}; }
+  });
+  // שורת סיכום כללי
+  var totR = HR+1+monthsList.length;
+  pick.getCell(totR,1).value='סה"כ שנה'; pick.getCell(totR,1).font={bold:true};
+  [2,3,4,5,6].forEach(function(ci){
+    var colL='ABCDEF'[ci-1];
+    pick.getCell(totR,ci).value = { formula: "SUM("+colL+(HR+1)+":"+colL+(totR-1)+")" };
+    pick.getCell(totR,ci).font={bold:true}; pick.getCell(totR,ci).border=border; pick.getCell(totR,ci).alignment={horizontal:'center'};
+  });
+  pick.getCell(totR,1).border=border; pick.getCell(totR,1).alignment={horizontal:'center'};
+  pick.getCell(HR-1,1).value='בחר שם מהרשימה, והסיכום יתעדכן אוטומטית';
+  pick.getCell(HR-1,1).font={italic:true,color:{argb:'FF6B7A8A'}}; pick.mergeCells(HR-1,1,HR-1,6);
 
   wb.xlsx.writeBuffer().then(function(buf){
     var blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
