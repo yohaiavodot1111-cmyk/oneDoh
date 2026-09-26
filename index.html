@@ -2392,48 +2392,96 @@ function buildHistoryExcel(d){
     c.fill={type:'pattern',pattern:'solid',fgColor:{argb:navy}}; c.alignment={horizontal:'center',vertical:'middle'}; c.border=border; }); r.height=20; return r; }
   function monTitle(mon){ var p=mon.split('-'); var names=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר']; return names[(+p[1])-1]+' '+p[0]; }
 
-  var rows = d.rows||[], summary = d.summary||[], classes = d.classes||[];
+  var rows = d.rows||[], summary = d.summary||[], perMonth = d.perMonth||[], classes = d.classes||[];
+  var COLS = ['נוכח','מאחרים','היעדרות מוצדקת','נעדרים ללא אישור','חופשה שנתית','לא דיווח','סה"כ ימים'];
 
-  // גיליון סקירה כללית
+  // ===== סקירה כללית: כיתה וחודש =====
   var ov = wb.addWorksheet('סקירה כללית', { views:[{rightToLeft:true}] });
-  ov.columns=[{width:10},{width:14},{width:10},{width:10},{width:10},{width:10},{width:10}];
-  ov.mergeCells(1,1,1,7); var t=ov.getCell(1,1); t.value='דוח אחד, גיבוי היסטוריה   '+d.generatedAt;
+  ov.columns=[{width:10},{width:14},{width:9},{width:9},{width:15},{width:16},{width:12},{width:10},{width:11}];
+  ov.mergeCells(1,1,1,9); var t=ov.getCell(1,1); t.value='דוח אחד, גיבוי היסטוריה   '+d.generatedAt;
   t.font={bold:true,size:16,color:{argb:navy}}; t.alignment={horizontal:'center'}; ov.getRow(1).height=26;
-  headRow(ov, ['כיתה','חודש','נוכחים','מאחרים','נעדרים','בחופשה','סה"כ']);
-  summary.forEach(function(g){ var r=ov.addRow([g.cls, monTitle(g.ym), g.present, g.late, g.absent, g.leave, g.total]);
+  headRow(ov, ['כיתה','חודש'].concat(COLS));
+  summary.forEach(function(g){ var r=ov.addRow([g.cls, monTitle(g.ym), g.present, g.late, g.absentJust, g.absentUnjust, g.leave, g.noReport, g.total]);
     r.eachCell(function(c){ c.border=border; c.alignment={horizontal:'center'}; }); });
-  if(!summary.length) ov.addRow(['אין נתונים','','','','','','']);
+  if(!summary.length) ov.addRow(['אין נתונים']);
 
-  // גיליון לכל כיתה
+  // ===== גיליון נתונים חודשי לכל שוחר (בסיס לבחירה) =====
+  var pm = wb.addWorksheet('נתונים', { views:[{rightToLeft:true}] });
+  pm.columns=[{width:22},{width:10},{width:12},{width:9},{width:9},{width:15},{width:16},{width:12},{width:10},{width:11}];
+  headRow(pm, ['שם','כיתה','חודש'].concat(COLS));
+  var pmSorted = perMonth.slice().sort(function(a,b){ return (a.name+a.ym).localeCompare(b.name+b.ym,'he'); });
+  pmSorted.forEach(function(m){
+    pm.addRow([m.name, m.cls, monTitle(m.ym), m.present, m.late, m.absentJust, m.absentUnjust, m.leave, m.noReport, m.trackedDays]);
+  });
+  var pmLast = pm.rowCount;
+  var namesList=[]; perMonth.forEach(function(m){ if(namesList.indexOf(m.name)<0) namesList.push(m.name); });
+  namesList.sort(function(a,b){ return a.localeCompare(b,'he'); });
+
+  // ===== לפי שוחר: בחירה מרשימה + סיכום חודשי אוטומטי =====
+  var pick = wb.addWorksheet('לפי שוחר', { views:[{rightToLeft:true}] });
+  pick.columns=[{width:14},{width:9},{width:9},{width:15},{width:16},{width:12},{width:10},{width:11}];
+  pick.mergeCells(1,1,1,8); var pt=pick.getCell(1,1); pt.value='צפייה לפי שוחר';
+  pt.font={bold:true,size:16,color:{argb:navy}}; pt.alignment={horizontal:'center'}; pick.getRow(1).height=26;
+  pick.getCell(3,1).value='בחר שוחר:'; pick.getCell(3,1).font={bold:true};
+  var nameCell=pick.getCell(3,2); nameCell.value=namesList[0]||''; nameCell.fill={type:'pattern',pattern:'solid',fgColor:{argb:soft}};
+  nameCell.border=border; nameCell.font={bold:true,color:{argb:navy}}; pick.mergeCells(3,2,3,4);
+  if(namesList.length){
+    var listStr='"'+namesList.map(function(n){return n.replace(/"/g,"'");}).join(',')+'"';
+    if(listStr.length<=255){ pick.getCell(3,2).dataValidation={type:'list',allowBlank:false,formulae:[listStr],showErrorMessage:true}; }
+    else { var hcol=12; pm.getCell(1,hcol).value='שמות'; namesList.forEach(function(n,i){ pm.getCell(i+2,hcol).value=n; }); pm.getColumn(hcol).hidden=true;
+      pick.getCell(3,2).dataValidation={type:'list',allowBlank:false,formulae:["'נתונים'!$L$2:$L$"+(namesList.length+1)],showErrorMessage:true}; }
+  }
+  pick.getCell(4,1).value='בחר שם מהרשימה, והסיכום יתעדכן אוטומטית'; pick.getCell(4,1).font={italic:true,color:{argb:'FF6B7A8A'}}; pick.mergeCells(4,1,4,8);
+
+  var HR=6;
+  ['חודש'].concat(COLS).forEach(function(txt,i){
+    var c=pick.getCell(HR,i+1); c.value=txt; c.font={bold:true,color:{argb:'FFFFFFFF'}};
+    c.fill={type:'pattern',pattern:'solid',fgColor:{argb:navy}}; c.alignment={horizontal:'center'}; c.border=border;
+  });
+  var nameRef="'לפי שוחר'!$B$3";
+  var rng=function(col){ return "'נתונים'!$"+col+"$2:$"+col+"$"+pmLast; };
+  // חודשים ייחודיים לפי הסדר
+  var monthsList=[]; perMonth.forEach(function(m){ if(monthsList.indexOf(m.ym)<0) monthsList.push(m.ym); }); monthsList.sort();
+  // עמודות הנתונים בגיליון נתונים: D=נוכח E=מאחר F=מוצדק G=לא מוצדק H=חופשה I=לא דיווח J=סהכ
+  var dataCols=['D','E','F','G','H','I','J'];
+  monthsList.forEach(function(m, idx){
+    var r=HR+1+idx; pick.getCell(r,1).value=monTitle(m);
+    dataCols.forEach(function(dc, k){
+      // SUMIFS על שם + חודש (בגיליון נתונים החודש מוצג כשם חודש, לכן נשווה לתא A של אותה שורה)
+      pick.getCell(r, k+2).value = { formula: "SUMIFS("+rng(dc)+","+rng('A')+","+nameRef+","+rng('C')+",$A$"+r+")" };
+    });
+    for(var ci=1;ci<=8;ci++){ var cc=pick.getCell(r,ci); cc.border=border; cc.alignment={horizontal:'center'}; }
+  });
+  var totR=HR+1+monthsList.length;
+  pick.getCell(totR,1).value='סה"כ שנה'; pick.getCell(totR,1).font={bold:true}; pick.getCell(totR,1).border=border; pick.getCell(totR,1).alignment={horizontal:'center'};
+  for(var ci=2;ci<=8;ci++){ var colL='ABCDEFGH'[ci-1];
+    pick.getCell(totR,ci).value={ formula:"SUM("+colL+(HR+1)+":"+colL+(totR-1)+")" };
+    pick.getCell(totR,ci).font={bold:true}; pick.getCell(totR,ci).border=border; pick.getCell(totR,ci).alignment={horizontal:'center'}; }
+
+  // ===== גיליון מפורט לכל כיתה =====
   classes.forEach(function(cls){
     var cr = rows.filter(function(x){return x.cls===cls;});
-    var safe = String(cls).replace(/[\\\/\?\*\[\]:]/g,' ').slice(0,28) || 'כיתה';
-    var ws = wb.addWorksheet(safe, { views:[{rightToLeft:true}] });
-    ws.columns=[{width:22},{width:12},{width:9},{width:14},{width:22},{width:10},{width:10}];
-    ws.mergeCells(1,1,1,7); var h=ws.getCell(1,1); h.value='כיתה '+cls; h.font={bold:true,size:15,color:{argb:navy}};
-    h.alignment={horizontal:'center'}; ws.getRow(1).height=24;
-
-    // סיכום חודשי לכיתה
-    var cs = summary.filter(function(g){return g.cls===cls;});
+    var safe=String(cls).replace(/[\\\/\?\*\[\]:]/g,' ').slice(0,28)||'כיתה';
+    var ws=wb.addWorksheet(safe,{views:[{rightToLeft:true}]});
+    ws.columns=[{width:22},{width:12},{width:9},{width:16},{width:22},{width:10},{width:10}];
+    ws.mergeCells(1,1,1,7); var h=ws.getCell(1,1); h.value='כיתה '+cls; h.font={bold:true,size:15,color:{argb:navy}}; h.alignment={horizontal:'center'}; ws.getRow(1).height=24;
+    var cs=summary.filter(function(g){return g.cls===cls;});
     if(cs.length){
       var sh=ws.addRow(['סיכום חודשי']); ws.mergeCells(sh.number,1,sh.number,7);
-      ws.getCell(sh.number,1).font={bold:true,color:{argb:navy}}; ws.getCell(sh.number,1).fill={type:'pattern',pattern:'solid',fgColor:{argb:soft}};
-      headRow(ws, ['חודש','נוכחים','מאחרים','נעדרים','בחופשה','סה"כ','']);
-      cs.forEach(function(g){ var r=ws.addRow([monTitle(g.ym), g.present, g.late, g.absent, g.leave, g.total, '']);
-        r.eachCell(function(c,i){ if(i<=6){ c.border=border; c.alignment={horizontal:'center'}; } }); });
+      ws.getCell(sh.number,1).font={bold:true,color:{argb:navy}}; ws.getCell(sh.number,1).fill={type:'pattern',pattern:'solid',fgColor:{argb:soft}}; ws.getCell(sh.number,1).alignment={horizontal:'center'};
+      headRow(ws, ['חודש','נוכח','מאחרים','מוצדקת','ללא אישור','חופשה','לא דיווח']);
+      cs.forEach(function(g){ var r=ws.addRow([monTitle(g.ym), g.present, g.late, g.absentJust, g.absentUnjust, g.leave, g.noReport]);
+        r.eachCell(function(c){ c.border=border; c.alignment={horizontal:'center'}; }); });
       ws.addRow([]);
     }
-
-    // פירוט מלא, מקובץ לפי חודש
-    var months = {}; cr.forEach(function(x){ (months[x.ym]=months[x.ym]||[]).push(x); });
+    var months={}; cr.forEach(function(x){ (months[x.ym]=months[x.ym]||[]).push(x); });
     Object.keys(months).sort().forEach(function(m){
       var mh=ws.addRow([monTitle(m)]); ws.mergeCells(mh.number,1,mh.number,7);
-      ws.getCell(mh.number,1).font={bold:true,color:{argb:'FFFFFFFF'}}; ws.getCell(mh.number,1).fill={type:'pattern',pattern:'solid',fgColor:{argb:head}};
-      ws.getCell(mh.number,1).alignment={horizontal:'center'};
+      ws.getCell(mh.number,1).font={bold:true,color:{argb:'FFFFFFFF'}}; ws.getCell(mh.number,1).fill={type:'pattern',pattern:'solid',fgColor:{argb:head}}; ws.getCell(mh.number,1).alignment={horizontal:'center'};
       headRow(ws, ['שם','תאריך','יום','סטטוס','סיבה','דווח','אושר']);
       months[m].sort(function(a,b){ return (a.name+a.date).localeCompare(b.name+b.date,'he'); }).forEach(function(x){
         var r=ws.addRow([x.name, x.date, x.weekday, x.status, x.reason, x.reportedAt, x.approvedAt]);
-        var fill = x.isLate?'FFFBF1DC':(x.isAbsent?'FFFBE3E3':(x.isLeave?'FFEEF1F5':null));
+        var fill = x.bucket==='late'?'FFFBF1DC':(x.bucket==='unjust'?'FFFBE3E3':(x.bucket==='just'?'FFF4E7DA':(x.bucket==='leave'?'FFEEF1F5':null)));
         r.eachCell(function(c){ c.border=border; c.alignment={horizontal:'center',vertical:'middle'}; if(fill) c.fill={type:'pattern',pattern:'solid',fgColor:{argb:fill}}; });
         ws.getCell(r.number,1).alignment={horizontal:'right'};
       });
@@ -2441,90 +2489,6 @@ function buildHistoryExcel(d){
     });
     if(!cr.length) ws.addRow(['אין דיווחים לכיתה זו']);
   });
-
-  // ===== גיליון נתונים גולמי לכל הדיווחים (משמש את הבחירה לפי שוחר) =====
-  var dataWs = wb.addWorksheet('נתונים', { views:[{rightToLeft:true}] });
-  dataWs.columns=[{width:22},{width:9},{width:12},{width:9},{width:14},{width:22},{width:9},{width:9},{width:9}];
-  headRow(dataWs, ['שם','כיתה','תאריך','חודש','סטטוס','סיבה','מאחר','נעדר','חופשה']);
-  var allRows = rows.slice().sort(function(a,b){ return (a.name+a.date).localeCompare(b.name+b.date,'he'); });
-  allRows.forEach(function(x){
-    dataWs.addRow([x.name, x.cls, x.date, monTitle(x.ym), x.status, x.reason,
-      x.isLate?1:0, x.isAbsent?1:0, x.isLeave?1:0]);
-  });
-  var dataLast = dataWs.rowCount; // כולל שורת הכותרת בשורה 1
-  var namesList = [];
-  allRows.forEach(function(x){ if(namesList.indexOf(x.name)<0) namesList.push(x.name); });
-  namesList.sort(function(a,b){ return a.localeCompare(b,'he'); });
-  var monthsList = []; (summary||[]).forEach(function(g){ if(monthsList.indexOf(g.ym)<0) monthsList.push(g.ym); });
-  rows.forEach(function(x){ if(monthsList.indexOf(x.ym)<0) monthsList.push(x.ym); });
-  monthsList.sort();
-
-  // ===== גיליון אינטראקטיבי: בחירת שוחר וסיכום חודשי =====
-  var pick = wb.addWorksheet('לפי שוחר', { views:[{rightToLeft:true}] });
-  pick.columns=[{width:16},{width:12},{width:12},{width:12},{width:12},{width:12}];
-  pick.mergeCells(1,1,1,6); var pt=pick.getCell(1,1); pt.value='צפייה לפי שוחר';
-  pt.font={bold:true,size:16,color:{argb:navy}}; pt.alignment={horizontal:'center'}; pick.getRow(1).height=26;
-
-  pick.getCell(3,1).value='בחר שוחר:'; pick.getCell(3,1).font={bold:true};
-  var nameCell = pick.getCell(3,2);
-  nameCell.value = namesList[0] || '';
-  nameCell.fill={type:'pattern',pattern:'solid',fgColor:{argb:soft}};
-  nameCell.border=border; nameCell.font={bold:true,color:{argb:navy}};
-  pick.mergeCells(3,2,3,4);
-  // רשימה נפתחת עם כל השמות
-  if(namesList.length){
-    var listStr = '"'+ namesList.map(function(n){return n.replace(/"/g,"'");}).join(',') +'"';
-    // אקסל מגביל רשימה מוטבעת לאורך מסוים, אז אם ארוך מדי נשתמש בהפניה לעמודת עזר
-    if(listStr.length <= 255){
-      pick.getCell(3,2).dataValidation = { type:'list', allowBlank:false, formulae:[listStr], showErrorMessage:true };
-    } else {
-      // עמודת עזר נסתרת בגיליון הנתונים עם השמות הייחודיים
-      var hcol = 11; // עמודה K
-      dataWs.getCell(1,hcol).value='שמות';
-      namesList.forEach(function(n,i){ dataWs.getCell(i+2,hcol).value=n; });
-      dataWs.getColumn(hcol).hidden = true;
-      var ref = "'נתונים'!$K$2:$K$"+(namesList.length+1);
-      pick.getCell(3,2).dataValidation = { type:'list', allowBlank:false, formulae:[ref], showErrorMessage:true };
-    }
-  }
-
-  // כותרת טבלת הסיכום החודשי לשוחר הנבחר
-  headRow(pick, []); // שורה ריקה מעוצבת? לא. במקום, נבנה כותרת ידנית בשורה 5
-  var HR = 5;
-  ['חודש','נוכח','מאחר','נעדר','חופשה','סה"כ'].forEach(function(t,i){
-    var c=pick.getCell(HR,i+1); c.value=t; c.font={bold:true,color:{argb:'FFFFFFFF'}};
-    c.fill={type:'pattern',pattern:'solid',fgColor:{argb:navy}}; c.alignment={horizontal:'center'}; c.border=border;
-  });
-  // שורה לכל חודש עם נוסחאות שמסתכמות מגיליון הנתונים לפי השם הנבחר
-  var nameRef = "'לפי שוחר'!$B$3";
-  var rng = function(col){ return "'נתונים'!$"+col+"$2:$"+col+"$"+dataLast; };
-  monthsList.forEach(function(m, idx){
-    var r = HR+1+idx;
-    pick.getCell(r,1).value = monTitle(m);
-    var monName = monTitle(m);
-    // תנאים: שם תואם וגם חודש תואם
-    var base = "COUNTIFS("+rng("A")+","+nameRef+","+rng("D")+",$A$"+r+")";
-    var lateF = "SUMIFS("+rng("G")+","+rng("A")+","+nameRef+","+rng("D")+",$A$"+r+")";
-    var absF  = "SUMIFS("+rng("H")+","+rng("A")+","+nameRef+","+rng("D")+",$A$"+r+")";
-    var lvF   = "SUMIFS("+rng("I")+","+rng("A")+","+nameRef+","+rng("D")+",$A$"+r+")";
-    pick.getCell(r,3).value = { formula: lateF };
-    pick.getCell(r,4).value = { formula: absF };
-    pick.getCell(r,5).value = { formula: lvF };
-    pick.getCell(r,2).value = { formula: base+"-"+lateF+"-"+absF+"-"+lvF }; // נוכח = סהכ פחות השאר
-    pick.getCell(r,6).value = { formula: base };
-    for(var ci=1;ci<=6;ci++){ var cc=pick.getCell(r,ci); cc.border=border; cc.alignment={horizontal:'center'}; }
-  });
-  // שורת סיכום כללי
-  var totR = HR+1+monthsList.length;
-  pick.getCell(totR,1).value='סה"כ שנה'; pick.getCell(totR,1).font={bold:true};
-  [2,3,4,5,6].forEach(function(ci){
-    var colL='ABCDEF'[ci-1];
-    pick.getCell(totR,ci).value = { formula: "SUM("+colL+(HR+1)+":"+colL+(totR-1)+")" };
-    pick.getCell(totR,ci).font={bold:true}; pick.getCell(totR,ci).border=border; pick.getCell(totR,ci).alignment={horizontal:'center'};
-  });
-  pick.getCell(totR,1).border=border; pick.getCell(totR,1).alignment={horizontal:'center'};
-  pick.getCell(HR-1,1).value='בחר שם מהרשימה, והסיכום יתעדכן אוטומטית';
-  pick.getCell(HR-1,1).font={italic:true,color:{argb:'FF6B7A8A'}}; pick.mergeCells(HR-1,1,HR-1,6);
 
   wb.xlsx.writeBuffer().then(function(buf){
     var blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
