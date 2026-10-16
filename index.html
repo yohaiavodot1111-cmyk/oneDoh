@@ -896,6 +896,7 @@ var RPC_MAP = {
   bulkReport:          ['bulk_report',           ['p_token','p_date','p_scope','p_status','p_reason']],
   generateReport:      ['generate_report',       ['p_token','p_date']],
   nadonInfo:           ['nadon_info',            ['p_token','p_student','p_date']],
+  nadonYearInfo:       ['nadon_year_info',       ['p_token','p_student']],
   studentDashboard:    ['student_dashboard',     ['p_token','p_student','p_date']],
   monthLog:            ['month_log',             ['p_token','p_student','p_year','p_month']],
   branchOverview:      ['branch_overview',       ['p_token','p_date']],
@@ -2709,7 +2710,7 @@ function openPrintable(data){
 /* ============ נדון איחור ============ */
 function heDate_(str){ var p=String(str).split('/'); return (+p[2])+'/'+(+p[1])+'/'+p[0]; }
 
-function openNadon(studentId){
+function openNadon(studentId, dateStr, yearly){
   // פותחים את החלון מיד בלחיצה, כדי לשמור על מחוות המשתמש. אם הדפדפן חוסם, יש מסלול חלופי בתוך הדף.
   var w = null;
   try { w = window.open('', '_blank'); } catch(e){ w = null; }
@@ -2721,7 +2722,10 @@ function openNadon(studentId){
       w.document.close();
     } catch(e){}
   }
-  callServer('nadonInfo', App.token, studentId, App.date).then(function(d){
+  var req = yearly ? callServer('nadonYearInfo', App.token, studentId)
+                   : callServer('nadonInfo', App.token, studentId, dateStr || App.date);
+  req.then(function(d){
+    d.yearly = !!yearly;
     if(w){ writeNadonDoc(w, d); }
     else { nadonOverlay(d); }   // חלון נחסם, מציגים בתוך הדף עם כפתור הדפסה
   }).catch(function(e){ try{ if(w) w.close(); }catch(_){} toast(e.message, true); });
@@ -2752,6 +2756,23 @@ function nadonCountText_(n){
   return n + ' פעמים';
 }
 
+/* נדון שנתי: תאריכי האיחורים על שורות הטופס. עד 7 איחורים, אחד בשורה עם הסיבה. מעבר לכך, כמה בשורה. */
+function nadonYearLines_(lates){
+  var items = lates.map(function(x){ return { d: heDate_(x.date), r: x.reason || '' }; });
+  var perLine = items.length <= 7 ? 1 : Math.ceil(items.length / 7);
+  var lines = [];
+  for(var i=0;i<items.length;i+=perLine){
+    var chunk = items.slice(i, i+perLine).map(function(x, k){
+      var num = (i+k+1) + '.';
+      var txt = '<span class="ltr">' + esc(x.d) + '</span>' + (perLine===1 && x.r ? '  ' + esc(x.r) : '');
+      return num + ' ' + txt;
+    });
+    lines.push('<div class="uline filled">' + chunk.join('&nbsp;&nbsp;&nbsp;&nbsp;') + '</div>');
+  }
+  while(lines.length < 7) lines.push('<div class="uline"></div>');
+  return lines.join('');
+}
+
 function writeNadonDoc(w, d){
   var cmd = d.commander || {};
   var css = ''
@@ -2776,20 +2797,22 @@ function writeNadonDoc(w, d){
     + '.note{ margin-top:22px; }'
     + '.sign{ margin-top:40px; }'
     + '.sigline{ width:230px; border-bottom:0.8pt solid #000; height:1px; margin-bottom:6px; }'
-    + '.sigrow{ display:flex; gap:34px; font-size:14px; }';
+    + '.sigrow{ display:flex; gap:34px; font-size:14px; }'
+    + '.ltr{ direction:ltr; unicode-bidi:isolate; display:inline-block; }'
+    + '.uline.filled{ height:auto; min-height:26px; padding:2px 4px 3px; font-size:14px; }';
 
   var html = '<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="utf-8">'
-    + '<title>נדון איחור ' + esc(d.name) + '</title>'
+    + '<title>' + (d.yearly ? 'נדון איחורים שנתי ' : 'נדון איחור ') + esc(d.name) + '</title>'
     + '<style>'+css+'</style></head><body>'
     + '<div class="cls">שמור</div>'
     + '<table class="ctl"><tbody>'
-    +   '<tr><td>בח"א 21 נוהל מס\' 2.2.9.08.19.421</td><td>מהדורה: 00</td><td>עמוד 1 מתוך 1</td></tr>'
+    +   '<tr><td>בח"א 21 נוהל מס\' <span class="ltr">421.19.08.09.2.2</span></td><td>מהדורה: 00</td><td>עמוד 1 מתוך 1</td></tr>'
     +   '<tr><td>פרק: בקרת הדרכה והסמכה</td><td>עורך: סמל אלה מזור</td><td>תאריך:</td></tr>'
     +   '<tr><td>שם הנוהל: תיק אישי לחניך</td><td>מאשר על: רס"ן צדוק יחזקאל</td><td>05/05/11</td></tr>'
     +   '<tr><td colspan="3" style="text-align:right">נספח ו\' טופס הנדון</td></tr>'
     + '</tbody></table>'
     + '<div class="head">'
-    +   '<div class="unit">צבא הגנה לישראל<br>שלוחת אשקלון<br>דואר צבאי 02229<br>טלפון: 0369 7581</div>'
+    +   '<div class="unit">צבא הגנה לישראל<br>שלוחת אשקלון<br>דואר צבאי <span class="ltr">02229</span><br>טלפון: <span class="ltr">0369 7581</span></div>'
     +   '<div></div>'
     + '</div>'
     + '<div class="al">אל: <u>תיק אישי</u></div>'
@@ -2801,9 +2824,12 @@ function writeNadonDoc(w, d){
     + '</div>'
     + '<div class="subj"><u>הנדון:</u>&nbsp;&nbsp;&nbsp;איחור .</div>'
     + '<div class="body-line">בתאריך ' + esc(heDate_(d.date)) + ' החניך\\ה ' + esc(d.name) + '</div>'
-    + '<div class="body-line">איחר\\ה למסדר בוקר ' + esc(nadonCountText_(d.lateCount)) + ' במהלך השבוע</div>'
-    + '<div class="uline"></div><div class="uline"></div><div class="uline"></div>'
-    + '<div class="uline"></div><div class="uline"></div><div class="uline"></div><div class="uline"></div>'
+    + (d.yearly
+        ? '<div class="body-line">איחר\\ה למסדר בוקר ' + esc(nadonCountText_(d.lateCount)) + ' מתחילת שנת הלימודים (' + esc(heDate_(d.seasonStart)) + ')</div>'
+          + nadonYearLines_(d.lates || [])
+        : '<div class="body-line">איחר\\ה למסדר בוקר ' + esc(nadonCountText_(d.lateCount)) + ' במהלך השבוע</div>'
+          + '<div class="uline"></div><div class="uline"></div><div class="uline"></div>'
+          + '<div class="uline"></div><div class="uline"></div><div class="uline"></div><div class="uline"></div>')
     + '<div class="note">החניך יודע כי הדבר מצוין בתיקו האישי.</div>'
     + '<div class="sign">'
     +   '<div class="sigline"></div>'
@@ -2888,7 +2914,9 @@ function drawMonth(){
   host.innerHTML='<div class="modal-bg" id="mlbg"><div class="modal" style="max-width:560px">'
     + '<div class="dhead"><div><div class="dname">יומן חודשי</div>'
     +   '<div class="dmeta">'+esc(d.name)+' | כיתה '+esc(d.cls)+'</div></div>'
-    +   '<button class="btn ghost sm" id="mlClose">סגירה</button></div>'
+    +   '<div style="display:flex;gap:8px;flex-wrap:wrap">'
+    +   (mlState.forCommander ? '<button class="btn ghost sm" id="mlYearNadon">נדון איחורים מתחילת השנה</button>' : '')
+    +   '<button class="btn ghost sm" id="mlClose">סגירה</button></div></div>'
     + '<div class="m-body">'
     +   '<div class="ml-nav"><button class="btn ghost sm" id="mlPrev">חודש קודם</button>'
     +     '<div class="ml-title">'+HE_MON[d.month-1]+' '+d.year+'</div>'
@@ -2900,6 +2928,7 @@ function drawMonth(){
     +   '<div id="mlDetail" class="ml-detail muted">בחרו יום כדי לראות את הדיווח</div>'
     + '</div></div></div>';
   el('mlClose').addEventListener('click', closeModal);
+  if(el('mlYearNadon')) el('mlYearNadon').addEventListener('click', function(){ openNadon(d.id || mlState.id, null, true); });
   el('mlbg').addEventListener('click', function(e){ if(e.target===el('mlbg')) closeModal(); });
   el('mlPrev').addEventListener('click', function(){ shiftMonth(-1); });
   el('mlNext').addEventListener('click', function(){ shiftMonth(1); });
@@ -2924,6 +2953,10 @@ function showDay(dateStr){
   } else {
     body += '<div class="muted">לא דווח ביום זה</div>';
   }
+  // נדון איחור לאותו יום, בתאריך האיחור
+  if(mlState.forCommander && x.status==='איחור'){
+    body += '<button class="btn slim sm" id="mldNadon" style="margin-top:10px">הפקת נדון איחור ליום זה</button>';
+  }
   // מפקד יכול לתקן דיווח ישן, שוחר לא
   if(mlState.forCommander){
     var opts = d.statuses.map(function(o){ return '<option '+(o===x.status?'selected':'')+'>'+esc(o)+'</option>'; }).join('');
@@ -2933,6 +2966,7 @@ function showDay(dateStr){
   }
   det.className='ml-detail';
   det.innerHTML = head + body;
+  if(el('mldNadon')) el('mldNadon').addEventListener('click', function(){ openNadon(d.id || mlState.id, dateStr, false); });
   if(mlState.forCommander && el('mldSave')){
     el('mldSave').addEventListener('click', function(){
       var st=el('mldSel').value, rs=el('mldReason').value.trim();
