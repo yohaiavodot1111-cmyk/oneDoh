@@ -303,6 +303,10 @@
   .scard .cur .chip{font-family:var(--display); font-weight:700; font-size:16px; color:var(--navy);}
   .scard .cur .chg{margin-inline-start:auto; color:var(--blue); font-weight:600; font-size:14px;
     background:none; border:none; padding:0;}
+  .btn.present{background:var(--present); border-color:var(--present); color:#fff;}
+  .btn.present:hover{background:#155544; border-color:#155544;}
+  .scard .cur .qp{margin-inline-start:auto; padding:9px 16px; font-size:15px; border-radius:8px; white-space:nowrap; flex:0 0 auto;}
+  .scard .cur .qp + .chg{margin-inline-start:6px;}
   .stgrid-m{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;}
   .stbtn{display:flex; align-items:center; gap:9px; border:1px solid var(--line); border-radius:10px;
     background:#fff; padding:13px 12px; font-size:15px; font-weight:600; color:var(--ink); text-align:right;}
@@ -1835,8 +1839,9 @@ function renderClassPane(){
       + statuses.map(function(o){ return '<option '+(o===s.status?'selected':'')+'>'+esc(o)+'</option>'; }).join('') + '</select>';
     var reason = '<input class="reason-inp reason-cell" data-id="'+esc(s.id)+'" value="'+esc(s.reason)+'" placeholder="סיבה" '+(ok?'':'disabled')+'>';
     var nadonBtn = (s.status==='איחור') ? '<button class="btn slim sm act-nadon" data-id="'+esc(s.id)+'">נדון</button>' : '';
+    var presentBtn = (s.noReport || s.status!=='נוכח') ? '<button class="btn sm present act-present" data-id="'+esc(s.id)+'">✓ נוכח</button>' : '';
     var actions = ok
-      ? '<div class="rowactions">'+(s.noReport?'':'<button class="btn slim sm act-approve" data-id="'+esc(s.id)+'">אישור</button>')
+      ? '<div class="rowactions">'+presentBtn+(s.noReport?'':'<button class="btn slim sm act-approve" data-id="'+esc(s.id)+'">אישור</button>')
         + '<button class="btn sm act-save" data-id="'+esc(s.id)+'">שמירה</button>'+nadonBtn+'</div>'
       : '<div class="rowactions"><span class="muted">צפייה בלבד</span>'+nadonBtn+'</div>';
     return '<tr class="'+(s.noReport?'norep ':'')+(s.saving?'rowsaving':'')+'">'
@@ -1920,6 +1925,7 @@ function renderClassPane(){
       + '<span class="approval '+apCls+'">'+esc(apTxt)+'</span></div>'
       + approvedInfoCard(s)
       + '<div class="cur"><span class="muted">סטטוס</span><span class="chip">'+esc(s.status || 'טרם דווח')+'</span>'
+      +   ((s.noReport || s.status!=='נוכח') ? '<button class="btn present qp act-present" data-id="'+esc(s.id)+'">✓ נוכח</button>' : '')
       +   '<button class="chg mtoggle" data-id="'+esc(s.id)+'">'+(picking?'סגירה':'שינוי')+'</button></div>'
       + pickerHtml
       + reasonHtml
@@ -1982,6 +1988,9 @@ function renderClassPane(){
     });
     document.querySelectorAll('.act-save').forEach(function(b){
       b.addEventListener('click', function(){ cmdAction(b.getAttribute('data-id'), 'set'); });
+    });
+    document.querySelectorAll('.act-present').forEach(function(b){
+      b.addEventListener('click', function(){ quickPresent(b.getAttribute('data-id')); });
     });
     document.querySelectorAll('.act-approve-m').forEach(function(b){
       b.addEventListener('click', function(){ cmdAction(b.getAttribute('data-id'), 'approve'); });
@@ -2174,6 +2183,19 @@ function revertStudent(st){
 function recountAll(){ cmdState.data.classes.forEach(recount); }
 
 /* שינוי מיידי בבורר או בשדה הסיבה נשמר במצב, כדי שרינדור מחדש לא ימחק את הבחירה */
+/* סימון נוכח בהקשה אחת: קובע נוכח, מנקה סיבה ושומר מיד */
+function quickPresent(id){
+  var st = findStudentById(id);
+  if(!st) return;
+  var c = cmdState.data.classes[cmdState.active];
+  if(!st.saving){
+    st._before = { status:st.status, reason:st.reason, approval:st.approval, noReport:st.noReport };
+  }
+  st.status = 'נוכח'; st.reason = ''; st.approval = 'שונה'; st.noReport = false;
+  st.dirty = false; st.unsaved = false; st._picking = false; st._pickAbs = false;
+  recount(c); renderTabs(); renderClassPane();
+  queueChange({ id:id, status:'נוכח', reason:'', mode:'set' }, st);
+}
 function stagePick(id, field, value){
   var st = findStudentById(id);
   if(!st) return;
