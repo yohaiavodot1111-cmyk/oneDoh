@@ -20,6 +20,8 @@
     --present:#1C6A54; --late:#8C6412; --absent:#A22F2F;
     --ring:rgba(46,125,190,.35);
     --display:'Miriam Libre', sans-serif;
+    --page-max:1640px;                       /* רוחב התוכן במחשב, מתמלא במסכים רחבים */
+    --page-pad:clamp(28px, 3.2vw, 64px);
     --sans:'Rubik', sans-serif;
   }
   *{box-sizing:border-box;}
@@ -29,7 +31,7 @@
 
   /* ============ כותרת ============ */
   header.masthead{background:var(--navy); color:#fff; border-bottom:2px solid var(--blue);}
-  .masthead .bar{max-width:1180px; margin:0 auto; padding:20px 28px; display:flex; align-items:center; gap:18px;}
+  .masthead .bar{max-width:var(--page-max); margin:0 auto; padding:20px var(--page-pad); display:flex; align-items:center; gap:18px;}
   .titles{flex:1 1 auto; min-width:0;}
   .titles .unit{font-size:12.5px; color:#9FB2C8; letter-spacing:.03em;}
   .titles .sys{font-family:var(--display); font-weight:700; font-size:29px; line-height:1.1; margin-top:2px; letter-spacing:-.01em;}
@@ -38,7 +40,7 @@
   .whoami button{margin-top:8px;}
 
   .docstrip{background:#fff; border-bottom:1px solid var(--line);}
-  .docstrip .in{max-width:1180px; margin:0 auto; padding:12px 28px; display:flex; align-items:center;
+  .docstrip .in{max-width:var(--page-max); margin:0 auto; padding:12px var(--page-pad); display:flex; align-items:center;
     justify-content:space-between; gap:14px; flex-wrap:wrap; font-size:13.5px; color:var(--muted);}
   .docstrip b{color:var(--ink); font-weight:700;}
   .syncnote{font-size:13px; color:var(--present); font-weight:600;}
@@ -52,7 +54,7 @@
     background:var(--blue); margin-inline-end:7px; vertical-align:middle; animation:pulse 1s infinite;}
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.25;}}
 
-  main{max-width:1180px; margin:0 auto; padding:32px 28px 90px;}
+  main{max-width:var(--page-max); margin:0 auto; padding:32px var(--page-pad) 90px;}
 
   /* ============ פאנלים ============ */
   .panel{background:var(--card); border:1px solid var(--line); border-radius:12px; overflow:hidden; box-shadow:0 1px 3px rgba(11,61,102,.05);}
@@ -420,11 +422,11 @@
   /* מסך אפסנאות מלא */
   .eqscreen{position:fixed; inset:0; z-index:60; background:var(--paper); display:flex; flex-direction:column;}
   .eqtop{background:linear-gradient(160deg,var(--navy) 0%,var(--navy-deep) 100%); color:#fff; box-shadow:0 2px 12px rgba(11,61,102,.18);}
-  .eqtop-in{max-width:1100px; margin:0 auto; width:100%; padding:16px 24px; display:flex; align-items:center; justify-content:space-between;}
+  .eqtop-in{max-width:var(--page-max); margin:0 auto; width:100%; padding:16px 24px; display:flex; align-items:center; justify-content:space-between;}
   .eqtop-title{font-family:var(--display); font-weight:700; font-size:22px;}
   .eqtop-sub{font-size:13px; opacity:.85; margin-top:3px;}
   .eqbody{flex:1 1 auto; overflow:auto;}
-  .eqbody-in{max-width:1100px; margin:0 auto; padding:22px 24px 60px;}
+  .eqbody-in{max-width:var(--page-max); margin:0 auto; padding:22px 24px 60px;}
   .eqbody.center{display:flex; align-items:flex-start; justify-content:center;}
   .eq-actions-bar{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px;}
   /* כרטיסי מוצר לשוחר */
