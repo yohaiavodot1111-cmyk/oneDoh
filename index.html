@@ -1861,7 +1861,7 @@ function renderClassPane(){
       + statuses.map(function(o){ return '<option '+(o===s.status?'selected':'')+'>'+esc(o)+'</option>'; }).join('') + '</select>';
     var reason = '<input class="reason-inp reason-cell" data-id="'+esc(s.id)+'" value="'+esc(s.reason)+'" placeholder="סיבה" '+(ok?'':'disabled')+'>';
     var nadonBtn = (s.status==='איחור') ? '<button class="btn slim sm act-nadon" data-id="'+esc(s.id)+'">נדון</button>' : '';
-    var presentBtn = (s.noReport || s.status!=='נוכח') ? '<button class="btn sm present act-present" data-id="'+esc(s.id)+'">✓ נוכח</button>' : '';
+    var presentBtn = s.noReport ? '<button class="btn sm present act-present" data-id="'+esc(s.id)+'">✓ נוכח</button>' : '';
     var actions = ok
       ? '<div class="rowactions">'+presentBtn+(s.noReport?'':'<button class="btn slim sm act-approve" data-id="'+esc(s.id)+'">אישור</button>')
         + '<button class="btn sm act-save" data-id="'+esc(s.id)+'">שמירה</button>'+nadonBtn+'</div>'
@@ -1947,7 +1947,7 @@ function renderClassPane(){
       + '<span class="approval '+apCls+'">'+esc(apTxt)+'</span></div>'
       + approvedInfoCard(s)
       + '<div class="cur"><span class="muted">סטטוס</span><span class="chip">'+esc(s.status || 'טרם דווח')+'</span>'
-      +   ((s.noReport || s.status!=='נוכח') ? '<button class="btn present qp act-present" data-id="'+esc(s.id)+'">✓ נוכח</button>' : '')
+      +   (s.noReport ? '<button class="btn present qp act-present" data-id="'+esc(s.id)+'">✓ נוכח</button>' : '')
       +   '<button class="chg mtoggle" data-id="'+esc(s.id)+'">'+(picking?'סגירה':'שינוי')+'</button></div>'
       + pickerHtml
       + reasonHtml
