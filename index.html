@@ -1151,6 +1151,7 @@ window.addEventListener('beforeunload', function(e){
 
 function isDesktop_(){ return window.matchMedia('(min-width:900px)').matches; }
 function route(fromCache){
+  if(el('stripDate') && App.date) el('stripDate').innerHTML = '<b>'+niceDate(App.date)+'</b>';   // חזרה מדוח של תאריך אחר
   return App.profile.kind==='student' ? renderStudent(fromCache) : renderCommander(fromCache);
 }
 
@@ -1736,6 +1737,7 @@ function renderCommander(fromCache){
 }
 
 function paintCommander(d){
+  sortCmdByLastName_(d);
   saveScreen_(d);
   (function(){
     cmdState.data=d;
@@ -1790,6 +1792,26 @@ function bindCmdTop(){
 }
 
 var filterText = '';
+
+/* מיון לפי שם משפחה ואחר כך שם פרטי. השרת שולח שם משפחה בנפרד; אם אין, שם המשפחה הוא מה שאחרי המילה הראשונה */
+var LAST_NAME_MAP_ = {};
+function lastNameOf_(full){
+  full = String(full||'');
+  if(LAST_NAME_MAP_[full] != null) return LAST_NAME_MAP_[full];
+  var i = full.indexOf(' ');
+  return i < 0 ? full : full.slice(i+1);
+}
+function cmpByLastName_(a, b){
+  var x = lastNameOf_(a).localeCompare(lastNameOf_(b), 'he');
+  return x || String(a||'').localeCompare(String(b||''), 'he');
+}
+function sortCmdByLastName_(d){
+  if(!d || !d.classes) return;
+  d.classes.forEach(function(c){
+    (c.students||[]).forEach(function(s){ if(s.lastName) LAST_NAME_MAP_[s.name] = s.lastName; });
+    if(c.students) c.students.sort(function(a,b){ return cmpByLastName_(a.name, b.name); });
+  });
+}
 
 function classSummary(c){
   var parts = [
@@ -1921,7 +1943,7 @@ function renderClassPane(){
         + '<button class="btn ghost act-save-m" data-id="'+esc(s.id)+'">שמירה</button></div>') + nadonBtnM;
 
     return '<div class="scard '+(s.noReport?'norep ':'')+(s.saving?'rowsaving':'')+'"><div class="top">'
-      + '<span class="nm"><span class="idx">'+idx+'.</span>'+esc(s.name)+candle+'</span>'
+      + '<span class="nm"><span class="idx">'+idx+'.</span><a class="namelink" data-id="'+esc(s.id)+'" href="#">'+esc(s.name)+'</a>'+candle+'</span>'
       + '<span class="approval '+apCls+'">'+esc(apTxt)+'</span></div>'
       + approvedInfoCard(s)
       + '<div class="cur"><span class="muted">סטטוס</span><span class="chip">'+esc(s.status || 'טרם דווח')+'</span>'
@@ -1966,6 +1988,10 @@ function renderClassPane(){
     b.addEventListener('click', function(){ openNadon(b.getAttribute('data-id')); });
   });
   bindCheckoutApprove_();
+  // לחיצה על שם פותחת את כרטיס השוחר, במחשב ובטלפון
+  document.querySelectorAll('.namelink').forEach(function(a){
+    a.addEventListener('click', function(e){ e.preventDefault(); openDashboard(a.getAttribute('data-id')); });
+  });
   if(el('pushBtn')) el('pushBtn').addEventListener('click', function(){ openClassPush(c.cls); });
   if(el('msgsBtn')) el('msgsBtn').addEventListener('click', function(){ openClassMessages(c.cls); });
   if(el('coToggleBtn')) el('coToggleBtn').addEventListener('click', function(){
@@ -1999,9 +2025,6 @@ function renderClassPane(){
       b.addEventListener('click', function(){ cmdAction(b.getAttribute('data-id'), 'set'); });
     });
     // בורר הסטטוס בטלפון, בהקשה
-    document.querySelectorAll('.namelink').forEach(function(a){
-      a.addEventListener('click', function(e){ e.preventDefault(); openDashboard(a.getAttribute('data-id')); });
-    });
     document.querySelectorAll('.mtoggle').forEach(function(b){
       b.addEventListener('click', function(){
         var st = findStudentById(b.getAttribute('data-id'));
@@ -2319,6 +2342,7 @@ function openGenerate(){
     setTimeout(openGenerate, 700);
     return;
   }
+  App.reportDate = null;   // לחיצה על הפקת דוח להיום תמיד מתחילה מהיום
   runGenerate(false);
 }
 function runGenerate(force, dateOverride){
@@ -2330,7 +2354,7 @@ function runGenerate(force, dateOverride){
       host.innerHTML='<div class="modal-bg"><div class="modal"><div class="m-body"><h3>אישור הפקה</h3><p>'+esc(r.message)+'</p>'
         +'<div class="m-actions"><button class="btn gold" id="mYes">הפקה עם הנתונים הנוכחיים</button>'
         +'<button class="btn ghost" id="mNo">ביטול</button></div></div></div></div>';
-      el('mYes').addEventListener('click', function(){ runGenerate(true); });
+      el('mYes').addEventListener('click', function(){ runGenerate(true, d); });
       el('mNo').addEventListener('click', closeModal);
       return;
     }
@@ -2341,6 +2365,8 @@ function runGenerate(force, dateOverride){
 function showReport(r){
   closeModal();
   App.lastReport = r.preview;
+  var repD = (r.preview && r.preview.date) || App.date;
+  el('stripDate').innerHTML = (repD === App.date) ? '<b>'+niceDate(repD)+'</b>' : 'דוח לתאריך <b>'+niceDate(repD)+'</b>';
   el('view').innerHTML='<div class="fade">'
     + '<div class="toolbar no-print">'
     +   '<button class="btn ghost" id="backFromRep">חזרה</button>'
@@ -2348,7 +2374,7 @@ function showReport(r){
     +   '<button class="btn" id="dlXlsx">הורדת Excel</button>'
     +   '<label style="display:flex;align-items:center;gap:8px;margin-inline-start:auto">'
     +     '<span class="sub" style="color:var(--muted)">תאריך הדוח</span>'
-    +     '<input type="date" id="repDate" value="'+toISO(App.date)+'" style="width:auto"></label>'
+    +     '<input type="date" id="repDate" value="'+toISO(repD)+'" style="width:auto"></label>'
     + '</div>'
     + '<div class="repnote no-print">התצוגה כאן היא לבדיקה. לפלט מדויק בגודל דף לחצו הדפסה ושמירה כ PDF, ובחלון ההדפסה בחרו שמירה כ PDF.</div>'
     + reportDoc(r.preview,'absent') + reportDoc(r.preview,'late') + '</div>';
@@ -2462,13 +2488,13 @@ function buildHistoryExcel(d){
   var pm = wb.addWorksheet('נתונים', { views:[{rightToLeft:true}] });
   pm.columns=[{width:22},{width:10},{width:12},{width:9},{width:9},{width:15},{width:16},{width:12},{width:10},{width:11}];
   headRow(pm, ['שם','כיתה','חודש'].concat(COLS));
-  var pmSorted = perMonth.slice().sort(function(a,b){ return (a.name+a.ym).localeCompare(b.name+b.ym,'he'); });
+  var pmSorted = perMonth.slice().sort(function(a,b){ return cmpByLastName_(a.name,b.name) || String(a.ym).localeCompare(String(b.ym)); });
   pmSorted.forEach(function(m){
     pm.addRow([m.name, m.cls, monTitle(m.ym), m.present, m.late, m.absentJust, m.absentUnjust, m.leave, m.noReport, m.trackedDays]);
   });
   var pmLast = pm.rowCount;
   var namesList=[]; perMonth.forEach(function(m){ if(namesList.indexOf(m.name)<0) namesList.push(m.name); });
-  namesList.sort(function(a,b){ return a.localeCompare(b,'he'); });
+  namesList.sort(cmpByLastName_);
 
   // ===== לפי שוחר: בחירה מרשימה + סיכום חודשי אוטומטי =====
   var pick = wb.addWorksheet('לפי שוחר', { views:[{rightToLeft:true}] });
@@ -2532,7 +2558,7 @@ function buildHistoryExcel(d){
       var mh=ws.addRow([monTitle(m)]); ws.mergeCells(mh.number,1,mh.number,7);
       ws.getCell(mh.number,1).font={bold:true,color:{argb:'FFFFFFFF'}}; ws.getCell(mh.number,1).fill={type:'pattern',pattern:'solid',fgColor:{argb:head}}; ws.getCell(mh.number,1).alignment={horizontal:'center'};
       headRow(ws, ['שם','תאריך','יום','סטטוס','סיבה','דווח','אושר']);
-      months[m].sort(function(a,b){ return (a.name+a.date).localeCompare(b.name+b.date,'he'); }).forEach(function(x){
+      months[m].sort(function(a,b){ return cmpByLastName_(a.name,b.name) || String(a.date).localeCompare(String(b.date)); }).forEach(function(x){
         var r=ws.addRow([x.name, x.date, x.weekday, x.status, x.reason, x.reportedAt, x.approvedAt]);
         var fill = x.bucket==='late'?'FFFBF1DC':(x.bucket==='unjust'?'FFFBE3E3':(x.bucket==='just'?'FFF4E7DA':(x.bucket==='leave'?'FFEEF1F5':null)));
         r.eachCell(function(c){ c.border=border; c.alignment={horizontal:'center',vertical:'middle'}; if(fill) c.fill={type:'pattern',pattern:'solid',fgColor:{argb:fill}}; });
@@ -3260,7 +3286,7 @@ function drawEquipClass(cls, items){
   var classData=(cmdState.data && cmdState.data.classes||[]).filter(function(c){return c.cls===cls;})[0];
   var roster=classData?classData.students:[];
   roster.forEach(function(st){ if(!byStud[st.id]) byStud[st.id]={name:st.name, items:[]}; });
-  var order=Object.keys(byStud).sort(function(a,b){ return byStud[a].name.localeCompare(byStud[b].name,'he'); });
+  var order=Object.keys(byStud).sort(function(a,b){ return cmpByLastName_(byStud[a].name, byStud[b].name); });
 
   var pendingTotal=0;
   var cards=order.map(function(sid){
