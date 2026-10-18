@@ -116,14 +116,26 @@
   .login-side .lead{color:var(--muted); font-size:15.5px; margin-bottom:34px; line-height:1.6;}
   .login-side .btn{width:100%; margin-top:20px; padding:16px; font-size:17px;}
 
+  .login-side .mfoot{display:none;}
   @media(max-width:900px){
-    #login{grid-template-columns:1fr; min-height:100vh;}
-    .login-brand{padding:44px 30px 38px; border-inline-start:none; border-bottom:3px solid var(--blue);}
-    .login-brand .sys{font-size:46px;}
-    .login-brand .tag{font-size:15.5px;}
+    /* טלפון: פס מותג קומפקטי למעלה, והטופס מקבל את כל שאר המסך עם הרבה אוויר */
+    #login{grid-template-columns:1fr; grid-template-rows:auto 1fr; min-height:100vh; min-height:100dvh;}
+    .login-brand{padding:calc(40px + env(safe-area-inset-top)) 28px 34px; border-inline-start:none; border-bottom:3px solid var(--blue);}
+    .login-brand .top{margin-top:0;}
+    .login-brand .unit{font-size:14px;}
+    .login-brand .sys{font-size:44px; margin-top:12px;}
+    .login-brand .rule{width:56px; margin:20px 0 16px;}
+    .login-brand .tag{font-size:15px;}
     .login-brand .foot{display:none;}
-    .login-side{padding:38px 26px 60px; align-items:flex-start;}
-    .login-side h1{font-size:27px;}
+    .login-side{padding:44px 28px calc(28px + env(safe-area-inset-bottom)); align-items:stretch;}
+    .login-side .inner{display:flex; flex-direction:column; max-width:440px; margin:0 auto;}
+    .login-side h1{font-size:28px; margin-bottom:12px;}
+    .login-side .lead{font-size:15.5px; line-height:1.7; margin-bottom:36px; text-wrap:balance;}
+    .login-side label{margin-bottom:10px;}
+    .login-side input{padding-top:15px; padding-bottom:15px; font-size:17px;}
+    .login-side .btn{margin-top:26px; padding:17px; border-radius:10px;}
+    .login-side .mfoot{display:block; margin-top:auto; padding-top:48px; font-size:12.5px; line-height:1.7; color:var(--muted); text-align:center; opacity:.8;}
+    #login .login-side .inner{min-height:100%;}
   }
 
   /* ============ מסך השוחר ============ */
@@ -838,6 +850,7 @@
         האתר אינו מצליח לפנות לסקריפט. יש לוודא שלושה דברים: שהכתובת בראש הקובץ היא זו שמסתיימת ב exec, שהפריסה עודכנה לגרסה חדשה, ושבפריסה נבחר Who has access עם הערך Anyone.
         <div id="offlineDetail" style="font-weight:500;font-size:13px;margin-top:8px;opacity:.85"></div>
       </div>
+      <div class="mfoot">השימוש במערכת מיועד לסגל ולשוחרי השלוחה בלבד.<br>אין להעביר את הקישור לגורם שאינו מורשה.</div>
     </div>
   </div>
 </section>
