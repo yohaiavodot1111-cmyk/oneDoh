@@ -738,6 +738,64 @@
     .nowbox{ padding:0 8px; }
     .whoami b{ font-size:14px; }
   }
+
+  /* ======================================================
+     אנימציות קלות: שקיפות ותזוזה בלבד, בלי סקריפט, כבויות למי שביקש פחות תנועה
+     ====================================================== */
+  @keyframes enterUp{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
+  @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
+  @keyframes popIn{ from{ opacity:0; transform:translateY(12px) scale(.97); } to{ opacity:1; transform:none; } }
+  @keyframes toastIn{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:none; } }
+  @keyframes flashOk{ 0%{ background-color:#DDF1E8; } 100%{ background-color:transparent; } }
+  @keyframes flashOkCard{ 0%{ background-color:#DDF1E8; box-shadow:0 0 0 2px rgba(28,106,84,.35); } 100%{ box-shadow:0 0 0 0 rgba(28,106,84,0); } }
+
+  .fade{ animation:enterUp .32s cubic-bezier(.2,.7,.2,1) both; }
+  body.quiet .fade, body.quiet .enter .scard, body.quiet .enter .roster tbody tr{ animation:none; }
+
+  /* רשימת השוחרים נכנסת בהדרגה, עד 12 הראשונים, השאר מיד */
+  .enter .scard, .enter .roster tbody tr{ animation:enterUp .3s cubic-bezier(.2,.7,.2,1) both; }
+  .enter .scard:nth-child(2), .enter .roster tbody tr:nth-child(2){ animation-delay:.03s; }
+  .enter .scard:nth-child(3), .enter .roster tbody tr:nth-child(3){ animation-delay:.06s; }
+  .enter .scard:nth-child(4), .enter .roster tbody tr:nth-child(4){ animation-delay:.09s; }
+  .enter .scard:nth-child(5), .enter .roster tbody tr:nth-child(5){ animation-delay:.12s; }
+  .enter .scard:nth-child(6), .enter .roster tbody tr:nth-child(6){ animation-delay:.15s; }
+  .enter .scard:nth-child(7), .enter .roster tbody tr:nth-child(7){ animation-delay:.18s; }
+  .enter .scard:nth-child(8), .enter .roster tbody tr:nth-child(8){ animation-delay:.21s; }
+  .enter .scard:nth-child(9), .enter .roster tbody tr:nth-child(9){ animation-delay:.24s; }
+  .enter .scard:nth-child(10), .enter .roster tbody tr:nth-child(10){ animation-delay:.27s; }
+  .enter .scard:nth-child(n+11), .enter .roster tbody tr:nth-child(n+11){ animation-delay:.3s; }
+
+  /* חלונות */
+  .modal-bg{ animation:fadeIn .18s ease-out both; }
+  .modal{ animation:popIn .24s cubic-bezier(.2,.8,.2,1) both; }
+  .modal-bg.still, .modal-bg.still .modal{ animation:none; }
+
+  /* הודעות קופצות */
+  .toast{ animation:toastIn .26s cubic-bezier(.2,.8,.2,1) both; transition:opacity .35s ease, transform .35s ease; }
+  .toast.out{ opacity:0; transform:translateY(10px); }
+
+  /* שוחר שעודכן מהבהב בירוק */
+  .roster tr.flash td{ animation:flashOk 1.1s ease-out both; }
+  .scard.flash{ animation:flashOkCard 1.1s ease-out both; }
+
+  /* בורר הסטטוסים בטלפון ופירוט יום ביומן */
+  .stgrid-m{ animation:enterUp .2s ease-out both; }
+  .ml-detail.pop{ animation:enterUp .22s ease-out both; }
+  .cal-cell{ transition:transform .12s ease, box-shadow .12s ease; }
+  .cal-cell:not(.cal-empty):hover{ transform:translateY(-1px); }
+
+  /* לשוניות הכיתות */
+  .tab{ transition:color .18s ease, border-color .18s ease; }
+
+  /* מסך הכניסה */
+  #login .login-side .inner > *{ animation:enterUp .45s cubic-bezier(.2,.7,.2,1) both; }
+  #login .login-side .inner > *:nth-child(2){ animation-delay:.05s; }
+  #login .login-side .inner > *:nth-child(3){ animation-delay:.1s; }
+  #login .login-side .inner > *:nth-child(n+4){ animation-delay:.15s; }
+
+  @media (prefers-reduced-motion: reduce){
+    *, *::before, *::after{ animation-duration:.001s !important; animation-delay:0s !important; transition-duration:.001s !important; }
+  }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -975,8 +1033,14 @@ function shortDate(str){ var p=str.split('/'); return (+p[2])+'.'+(+p[1])+'.'+p[
 function el(id){ return document.getElementById(id); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
 function toast(msg,isErr){ var t=document.createElement('div'); t.className='toast'+(isErr?' err':''); t.textContent=msg;
-  document.body.appendChild(t); setTimeout(function(){t.style.opacity='0';t.style.transition='opacity .4s';},2700);
-  setTimeout(function(){t.remove();},3200); }
+  var dur = Math.min(9000, Math.max(2700, String(msg).length * 60));   // הודעה ארוכה נשארת יותר זמן
+  document.body.appendChild(t); setTimeout(function(){ t.classList.add('out'); }, dur);
+  setTimeout(function(){t.remove();}, dur + 400); }
+/* ריענון שקט: רענון ברקע מצייר בלי אנימציית כניסה */
+function quietPaint_(){
+  document.body.classList.add('quiet');
+  setTimeout(function(){ document.body.classList.remove('quiet'); }, 450);
+}
 function spinner(){ return '<div class="spinner"></div>'; }
 function statusClass(s){ if(s==='חופשה שנתית') return 'd-muted';
   if(['נוכח','פעילות חוץ','טיול/סיור'].indexOf(s)>=0) return 'd-present';
@@ -1239,6 +1303,7 @@ function pollTick(){
     lastSnapshot = snap;
     saveSnap_(d);
 
+    quietPaint_();
     if(App.profile.kind === 'student'){
       paintStudent(d);
     } else {
@@ -1319,7 +1384,7 @@ function renderStudent(fromCache){
     paintStudent(cachedS); maybeLoadDays(cachedS);
     callServer('studentGetDay', App.token, stuDate).then(function(d){
       saveSnap_(d);
-      if(JSON.stringify(d) !== JSON.stringify(cachedS)) paintStudent(d);
+      if(JSON.stringify(d) !== JSON.stringify(cachedS)){ quietPaint_(); paintStudent(d); }
     }).catch(function(){});
     return;
   }
@@ -1725,7 +1790,7 @@ function renderCommander(fromCache){
     paintCommander(cached);                       // מיידי מהמטמון המקומי
     callServer('commanderGetClasses', App.token, App.date).then(function(d){
       saveSnap_(d);
-      if(JSON.stringify(d) !== JSON.stringify(cached)){ var keep=cmdState.active; paintCommander(d);
+      if(JSON.stringify(d) !== JSON.stringify(cached)){ var keep=cmdState.active; quietPaint_(); paintCommander(d);
         if(cmdState.data && keep < cmdState.data.classes.length){ cmdState.active=keep; renderTabs(); renderClassPane(); } }
     }).catch(function(){});
     return;
@@ -1866,7 +1931,7 @@ function renderClassPane(){
       ? '<div class="rowactions">'+presentBtn+(s.noReport?'':'<button class="btn slim sm act-approve" data-id="'+esc(s.id)+'">אישור</button>')
         + '<button class="btn sm act-save" data-id="'+esc(s.id)+'">שמירה</button>'+nadonBtn+'</div>'
       : '<div class="rowactions"><span class="muted">צפייה בלבד</span>'+nadonBtn+'</div>';
-    return '<tr class="'+(s.noReport?'norep ':'')+(s.saving?'rowsaving':'')+'">'
+    return '<tr class="'+(s.noReport?'norep ':'')+(s.saving?'rowsaving':'')+flashCls_(s)+'">'
       + '<td><span class="idx">'+(c.students.indexOf(s)+1)+'.</span> <a class="name namelink" data-id="'+esc(s.id)+'" href="#">'+esc(s.name)+'</a>'+candle+'</td>'
       + '<td>'+sel+'</td><td style="min-width:180px">'+reason+'</td>'
       + '<td><span class="approval '+apCls+'">'+esc(apTxt)+'</span>'+approvedInfo(s)+coCell(s)+'</td>'
@@ -1942,7 +2007,7 @@ function renderClassPane(){
       : '<div class="acts"><button class="btn gold act-approve-m" data-id="'+esc(s.id)+'">אישור</button>'
         + '<button class="btn ghost act-save-m" data-id="'+esc(s.id)+'">שמירה</button></div>') + nadonBtnM;
 
-    return '<div class="scard '+(s.noReport?'norep ':'')+(s.saving?'rowsaving':'')+'"><div class="top">'
+    return '<div class="scard '+(s.noReport?'norep ':'')+(s.saving?'rowsaving':'')+flashCls_(s)+'"><div class="top">'
       + '<span class="nm"><span class="idx">'+idx+'.</span><a class="namelink" data-id="'+esc(s.id)+'" href="#">'+esc(s.name)+'</a>'+candle+'</span>'
       + '<span class="approval '+apCls+'">'+esc(apTxt)+'</span></div>'
       + approvedInfoCard(s)
@@ -1956,6 +2021,9 @@ function renderClassPane(){
 
     if(!cards) cards = '<div class="muted center" style="padding:30px">לא נמצא שוחר בשם הזה</div>';
 
+  var enterNow = (cmdState._shownCls !== c.cls);   // אנימציית כניסה רק במעבר לכיתה, לא בכל רענון
+  cmdState._shownCls = c.cls;
+  el('classPane').className = enterNow ? 'enter' : '';
   el('classPane').innerHTML =
     '<div class="panel"><div class="head">'
     + '<div><h2>כיתה '+esc(c.cls)+'</h2><div class="sub" style="margin-top:6px">'+classSummary(c)+'</div>'
@@ -2056,13 +2124,25 @@ function renderClassPane(){
     });
     el('approveAll').addEventListener('click', function(){
       var pending = c.students.filter(function(s){ return !s.noReport && s.approval==='ממתין'; });
-      if(!pending.length){ toast('אין דיווחים שממתינים לאישור'); return; }
+      var noRep = c.students.filter(function(s){ return s.noReport; });
+      var noRepTxt = '';
+      if(noRep.length){
+        var nm = noRep.slice(0,4).map(function(s){ return s.name; }).join(', ') + (noRep.length>4 ? ' ועוד '+(noRep.length-4) : '');
+        noRepTxt = (noRep.length===1 ? 'שוחר אחד עוד לא דיווח: ' : noRep.length+' שוחרים עוד לא דיווחו: ') + nm
+          + '. אין להם דיווח לאשר, יש לסמן להם סטטוס או ללחוץ נוכח';
+      }
+      if(!pending.length){
+        toast(noRep.length ? ('כל הדיווחים כבר אושרו. ' + noRepTxt) : 'כל הדיווחים בכיתה כבר אושרו');
+        return;
+      }
       pending.forEach(function(s){
         s._before = { status:s.status, reason:s.reason, approval:s.approval, noReport:s.noReport };
         s.approval = 'אושר';
+        markFlash_(s);
         queueChange({ id:s.id, status:s.status, reason:s.reason, mode:'approve' }, s);
       });
       recount(c); renderTabs(); renderClassPane();
+      toast((pending.length===1 ? 'אושר דיווח אחד' : 'אושרו ' + pending.length + ' דיווחים') + (noRepTxt ? '. ' + noRepTxt : ''));
     });
     el('cutoffBtn').addEventListener('click', function(){
       var prev = c.cutoff, next = el('cutoffInp').value;
@@ -2210,6 +2290,7 @@ function recountAll(){ cmdState.data.classes.forEach(recount); }
 function quickPresent(id){
   var st = findStudentById(id);
   if(!st) return;
+  markFlash_(st);
   var c = cmdState.data.classes[cmdState.active];
   if(!st.saving){
     st._before = { status:st.status, reason:st.reason, approval:st.approval, noReport:st.noReport };
@@ -2219,6 +2300,9 @@ function quickPresent(id){
   recount(c); renderTabs(); renderClassPane();
   queueChange({ id:id, status:'נוכח', reason:'', mode:'set' }, st);
 }
+/* הבהוב ירוק קצר על שוחר שעודכן */
+function markFlash_(st){ st._flashAt = Date.now(); }
+function flashCls_(st){ return (st._flashAt && Date.now() - st._flashAt < 900) ? ' flash' : ''; }
 function stagePick(id, field, value){
   var st = findStudentById(id);
   if(!st) return;
@@ -2252,6 +2336,7 @@ function cmdAction(id, mode){
   if(!st.saving){
     st._before = { status:st.status, reason:st.reason, approval:st.approval, noReport:st.noReport };
   }
+  markFlash_(st);
   if(mode!=='approve'){ st.status=status; st.reason=reason; st.approval='שונה'; st.noReport=false; }
   else { st.approval='אושר'; }
   st.dirty = false; st.unsaved = false;
@@ -3014,6 +3099,7 @@ function showDay(dateStr){
   }
   det.className='ml-detail';
   det.innerHTML = head + body;
+  det.classList.remove('pop'); void det.offsetWidth; det.classList.add('pop');
   if(el('mldNadon')) el('mldNadon').addEventListener('click', function(){ openNadon(d.id || mlState.id, dateStr, false); });
   if(mlState.forCommander && el('mldSave')){
     el('mldSave').addEventListener('click', function(){
@@ -3028,6 +3114,16 @@ function showDay(dateStr){
 }
 
 function closeModal(){ el('modalHost').innerHTML=''; }
+/* חלון שכבר פתוח ומתעדכן (למשל מעבר חודש ביומן) לא קופץ שוב */
+(function(){
+  var host = document.getElementById('modalHost'); if(!host || !window.MutationObserver) return;
+  var wasOpen = false;
+  new MutationObserver(function(){
+    var open = !!host.querySelector('.modal-bg');
+    if(open && wasOpen){ var bg = host.querySelector('.modal-bg'); if(bg) bg.classList.add('still'); }
+    wasOpen = open;
+  }).observe(host, { childList:true });
+})();
 
 /* ============ דשבורד שוחר ============ */
 function pctColor(p){ return p>=90?'var(--present)':(p>=75?'var(--late)':'var(--absent)'); }
