@@ -828,6 +828,49 @@
   .enter .dty-row{animation:enterUp .3s cubic-bezier(.2,.7,.2,1) both;}
   .dty-row.flash{animation:flashOk 1.1s ease-out both;}
   body.quiet .enter .dty-row{animation:none;}
+
+  /* ============ יציאות וסיורים ============ */
+  .tr-list{display:flex; flex-direction:column;}
+  .tr-card, .tr-check{display:flex; align-items:center; gap:12px; padding:16px 20px; border-bottom:1px solid var(--line-2); cursor:pointer; transition:background .15s ease;}
+  .tr-card:hover, .tr-check:hover{background:var(--paper);}
+  .tr-card:last-child, .tr-check:last-child{border-bottom:none;}
+  .tr-card.today{border-inline-start:4px solid var(--blue);}
+  .tr-main{flex:1 1 auto; min-width:0;}
+  .tr-name{font-family:var(--display); font-weight:700; font-size:18px; color:var(--navy);}
+  .tr-meta{font-size:13.5px; color:var(--muted); margin-top:4px; line-height:1.6;}
+  .tr-go{color:var(--muted); transform:scaleX(-1); display:inline-flex;} .tr-go svg{width:20px; height:20px;}
+  .tr-title{margin:4px 0 18px;} .tr-title .tr-name{font-size:24px;}
+  .tr-big{width:100%; padding:16px; font-size:17px; border-radius:12px; margin-top:16px;}
+  .tr-chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:4px;}
+  .tr-chip{border:1px solid var(--line); background:#fff; border-radius:99px; padding:8px 14px; font-size:14px; font-weight:600; color:var(--ink);}
+  .tr-chip.on{background:var(--sky-soft); border-color:var(--blue); color:var(--navy);}
+  .tr-stats{display:grid; grid-template-columns:repeat(3,1fr); gap:10px;}
+  .tr-stats div{background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px; text-align:center;}
+  .tr-stats b{display:block; font-family:var(--display); font-size:28px; color:var(--navy); line-height:1.1;}
+  .tr-stats span{font-size:13px; color:var(--muted);}
+  .tr-count{font-family:var(--display); font-weight:700; font-size:24px; color:var(--late);}
+  .tr-count small{font-size:14px; color:var(--muted); font-weight:500;}
+  .tr-check.ok .tr-count{color:var(--present);}
+  .tr-actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:16px;}
+  .tc-panel{overflow:hidden;}
+  .tc-top{padding:18px 20px 14px; border-bottom:1px solid var(--line-2);}
+  .tc-num b{font-family:var(--display); font-size:44px; color:var(--navy); line-height:1;}
+  .tc-num span{font-size:20px; color:var(--muted); font-weight:600;}
+  .tc-lbl{font-size:14px; color:var(--muted); margin-top:4px;}
+  .tc-sync{font-size:12.5px; color:var(--present); margin-top:8px; font-weight:600;}
+  .tc-sync.off{color:var(--absent);}
+  .tc-list{display:flex; flex-direction:column;}
+  .tc-row{display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; min-height:60px; padding:10px 20px;
+    background:#fff; border:none; border-bottom:1px solid var(--line-2); border-radius:0; text-align:right; font-weight:600; font-size:16.5px; color:var(--ink);}
+  .tc-row:last-child{border-bottom:none;}
+  .tc-row .tc-box{width:34px; height:34px; flex:0 0 auto; border:2px solid var(--line); border-radius:10px; display:flex; align-items:center; justify-content:center; color:#fff; transition:background .15s ease, border-color .15s ease;}
+  .tc-row .tc-box svg{width:20px; height:20px;}
+  .tc-row.on{background:#F3FAF6;}
+  .tc-row.on .tc-box{background:var(--present); border-color:var(--present);}
+  .tc-row.flash{animation:flashOk 1.1s ease-out both;}
+  .tc-bar{position:sticky; bottom:0; padding:10px 0 calc(10px + env(safe-area-inset-bottom)); background:linear-gradient(transparent, var(--paper) 30%); z-index:5; display:flex; flex-direction:column; align-items:center;}
+  .tc-bar .tr-big{margin-top:6px;}
+  @media(max-width:620px){ .tr-stats b{font-size:24px;} .tr-name{font-size:17px;} }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -994,6 +1037,16 @@ var RPC_MAP = {
   nadonYearInfo:       ['nadon_year_info',       ['p_token','p_student']],
   dutyGetRoster:       ['duty_get_roster',       ['p_token']],
   dutyMarkPresent:     ['duty_mark_present',     ['p_token','p_ids']],
+  tripList:            ['trip_list',             ['p_token']],
+  tripCreate:          ['trip_create',           ['p_token','p_name','p_date','p_classes']],
+  tripDelete:          ['trip_delete',           ['p_token','p_trip']],
+  tripClass:           ['trip_class',            ['p_token','p_trip','p_class']],
+  tripStart:           ['trip_start',            ['p_token','p_trip','p_class','p_title']],
+  tripClose:           ['trip_close_roster',     ['p_token','p_trip','p_class']],
+  tripNewCheck:        ['trip_new_check',        ['p_token','p_trip','p_class','p_title']],
+  tripDeleteCheck:     ['trip_delete_check',     ['p_token','p_check']],
+  tripMark:            ['trip_mark',             ['p_token','p_check','p_items']],
+  tripMember:          ['trip_member',           ['p_token','p_trip','p_class','p_student','p_in']],
   studentDashboard:    ['student_dashboard',     ['p_token','p_student','p_date']],
   monthLog:            ['month_log',             ['p_token','p_student','p_year','p_month']],
   branchOverview:      ['branch_overview',       ['p_token','p_date']],
@@ -1215,6 +1268,7 @@ function showAckModal(msgs){
 }
 function enterPortal(){
   if(!App.token || !App.profile){ return; }
+  App.screen = null;
   el('login').classList.add('hidden'); el('portal').classList.remove('hidden');
   var p=App.profile;
   el('whoName').textContent = p.name||'';
@@ -1252,6 +1306,7 @@ window.addEventListener('beforeunload', function(e){
 
 function isDesktop_(){ return window.matchMedia('(min-width:900px)').matches; }
 function route(fromCache){
+  App.screen = null;
   if(el('stripDate') && App.date) el('stripDate').innerHTML = '<b>'+niceDate(App.date)+'</b>';   // חזרה מדוח של תאריך אחר
   if(App.profile.kind==='duty') return renderDuty(fromCache);
   return App.profile.kind==='student' ? renderStudent(fromCache) : renderCommander(fromCache);
@@ -1302,6 +1357,7 @@ function busyNow(){
   if(document.hidden) return true;                 // הכרטיסייה ברקע
   if(typeof INFLIGHT !== 'undefined' && INFLIGHT) return true;  // שמירה נשלחת כרגע
   if(typeof duty !== 'undefined' && duty.pending > 0) return true;  // סימון חנתר נשלח כרגע
+  if(App.screen && App.screen !== 'main') return true;            // במסך אחר (דוח, יציאות), לא מציירים מעליו
   if(pendingCount() > 0) return true;              // יש שמירה בתור
   if(typeof anyEditing === 'function' && anyEditing()) return true;
   if(el('modalHost') && el('modalHost').innerHTML.trim()) return true;  // חלון פתוח
@@ -1827,6 +1883,451 @@ function nowHM(){
 /* ============ מסך מפקד ============ */
 var cmdState={data:null, active:0};
 
+
+/* ============ יציאות וסיורים ============
+   רובריקה נפרדת מדוח הבוקר. יציאה לכמה כיתות, וכל כיתה מנוהלת בנפרד.
+   ספירה ראשונה קובעת מי יוצא. אחרי סגירת הרשימה כל ספירה היא על הרשימה בלבד. */
+var trip = { list:null, myClasses:[], cur:null, tripId:null, cls:null, checkId:null,
+             outbox:[], inflight:false, onlyMissing:false, retryT:null };
+var TRIP_TITLES = ['עלייה לאוטובוס','הגעה ליעד','יציאה מהיעד','חזרה לבסיס'];
+
+function openTrips(){
+  App.screen = 'trips';
+  el('view').innerHTML = spinner();
+  callServer('tripList', App.token).then(function(d){
+    trip.list = d.trips || []; trip.myClasses = d.myClasses || []; trip.today = d.today;
+    drawTripList();
+  }).catch(function(e){ toast(e.message, true); route(); });
+}
+
+function drawTripList(){
+  var cards = trip.list.map(function(t){
+    var isToday = t.date === trip.today;
+    return '<div class="tr-card'+(isToday?' today':'')+'" data-id="'+esc(t.id)+'">'
+      + '<div class="tr-main"><div class="tr-name">'+esc(t.name)+'</div>'
+      +   '<div class="tr-meta">'+(isToday?'<b>היום</b> | ':'')+esc(shortDate(t.date))+' | כיתות '+esc(t.classes.join(', '))
+      +   ' | '+(t.checks ? t.checks+' ספירות' : 'טרם נספרו')+'</div></div>'
+      + (t.canDelete ? '<button class="btn slim sm tr-del" data-id="'+esc(t.id)+'">מחיקה</button>' : '')
+      + '<span class="tr-go">'+ic('chev')+'</span></div>';
+  }).join('') || '<div class="muted center" style="padding:34px">אין עדיין יציאות. לחצו על "יציאה חדשה" כדי להתחיל.</div>';
+
+  el('view').innerHTML = '<div class="fade">'
+    + '<div class="toolbar"><button class="btn ghost" id="trBack">חזרה לדוח הנוכחות</button>'
+    + (trip.myClasses.length ? '<button class="btn gold" id="trNew">יציאה חדשה</button>' : '') + '</div>'
+    + '<div class="panel"><div class="head"><div><h2>יציאות וסיורים</h2>'
+    + '<div class="sub" style="margin-top:6px">ספירות נוכחות ביציאות. נפרד לגמרי מדוח הבוקר.</div></div></div>'
+    + '<div class="tr-list">'+cards+'</div></div></div>';
+
+  el('trBack').addEventListener('click', function(){ App.screen = 'main'; route(); });
+  if(el('trNew')) el('trNew').addEventListener('click', openTripNew);
+  document.querySelectorAll('.tr-card').forEach(function(c){
+    c.addEventListener('click', function(e){
+      if(e.target.closest('.tr-del')) return;
+      var t = trip.list.filter(function(x){ return x.id === c.getAttribute('data-id'); })[0];
+      if(t) openTripClass(t.id, t.classes[0]);
+    });
+  });
+  document.querySelectorAll('.tr-del').forEach(function(b){
+    b.addEventListener('click', function(){
+      var t = trip.list.filter(function(x){ return x.id === b.getAttribute('data-id'); })[0];
+      tripConfirm('מחיקת היציאה "'+t.name+'"', 'היציאה וכל הספירות שלה יוסרו מהרשימה.', 'מחיקה', function(){
+        callServer('tripDelete', App.token, t.id).then(function(){ toast('היציאה נמחקה'); openTrips(); })
+          .catch(function(e){ toast(e.message, true); });
+      });
+    });
+  });
+}
+
+function tripConfirm(title, text, yes, fn){
+  el('modalHost').innerHTML = '<div class="modal-bg" id="tcbg"><div class="modal"><div class="m-body">'
+    + '<h3>'+esc(title)+'</h3><p class="muted">'+esc(text)+'</p>'
+    + '<div class="m-actions"><button class="btn gold" id="tcYes">'+esc(yes)+'</button><button class="btn ghost" id="tcNo">ביטול</button></div>'
+    + '</div></div></div>';
+  el('tcNo').addEventListener('click', closeModal);
+  el('tcbg').addEventListener('click', function(e){ if(e.target === el('tcbg')) closeModal(); });
+  el('tcYes').addEventListener('click', function(){ closeModal(); fn(); });
+}
+
+function openTripNew(){
+  var only = trip.myClasses.length === 1;
+  var checks = trip.myClasses.map(function(c){
+    return '<label class="chk"><input type="checkbox" class="trn-cls" value="'+esc(c)+'"'+(only?' checked':'')+'> '+esc(c)+'</label>';
+  }).join('');
+  el('modalHost').innerHTML = '<div class="modal-bg" id="trnbg"><div class="modal"><div class="m-body">'
+    + '<h3>יציאה חדשה</h3>'
+    + '<label>שם היציאה</label><input id="trnName" placeholder="לדוגמה: סיור במוזיאון חיל האוויר">'
+    + '<label style="margin-top:12px">תאריך</label><input type="date" id="trnDate" value="'+toISO(App.date)+'">'
+    + '<label style="margin-top:12px">כיתות שיוצאות</label><div class="chk-grid">'+checks+'</div>'
+    + '<div class="muted" style="font-size:12.5px;margin-top:8px">כל מק"ס יספור את הכיתה שלו. הספירה הראשונה בכל כיתה קובעת מי יוצא.</div>'
+    + '<div class="m-actions"><button class="btn gold" id="trnGo">יצירת היציאה</button><button class="btn ghost" id="trnNo">ביטול</button></div>'
+    + '</div></div></div>';
+  el('trnNo').addEventListener('click', closeModal);
+  el('trnbg').addEventListener('click', function(e){ if(e.target === el('trnbg')) closeModal(); });
+  setTimeout(function(){ if(el('trnName')) el('trnName').focus(); }, 60);
+  el('trnGo').addEventListener('click', function(){
+    var name = el('trnName').value.trim(), date = fromISO(el('trnDate').value) || App.date;
+    var cls = Array.prototype.slice.call(document.querySelectorAll('.trn-cls:checked')).map(function(x){ return x.value; });
+    if(!name){ toast('חובה לתת שם ליציאה', true); return; }
+    if(!cls.length){ toast('יש לבחור לפחות כיתה אחת', true); return; }
+    var b = el('trnGo'); b.disabled = true; b.textContent = 'יוצר';
+    callServer('tripCreate', App.token, name, date, cls).then(function(r){
+      closeModal(); toast('היציאה נוצרה'); openTripClass(r.id, cls.slice().sort()[0]);
+    }).catch(function(e){ b.disabled = false; b.textContent = 'יצירת היציאה'; toast(e.message, true); });
+  });
+}
+
+/* ===== כיתה ביציאה ===== */
+function openTripClass(tripId, cls, thenCheck){
+  App.screen = 'trips';
+  trip.tripId = tripId; trip.cls = cls;
+  if(!trip.cur || trip.cur.trip.id !== tripId || trip.cur.cls !== cls) el('view').innerHTML = spinner();
+  return callServer('tripClass', App.token, tripId, cls).then(function(d){
+    trip.cur = d;
+    if(thenCheck) return drawTripCheck(thenCheck);
+    // ספירה ראשונה פתוחה: נכנסים ישר למסך הסימון
+    if(d.started && !d.rosterClosed && d.canEdit){ var f = tripFirst_(); if(f) return drawTripCheck(f.id); }
+    drawTripClass();
+  }).catch(function(e){ toast(e.message, true); openTrips(); });
+}
+function tripFirst_(){ return (trip.cur.checks||[]).filter(function(k){ return k.isFirst; })[0]; }
+function tripCheck_(id){ return (trip.cur.checks||[]).filter(function(k){ return String(k.id) === String(id); })[0]; }
+function tripMembers_(){ return trip.cur.students.filter(function(s){ return s.member; }); }
+
+function tripHead_(sub){
+  var d = trip.cur;
+  var tabs = d.trip.classes.length > 1
+    ? '<div class="classtabs" style="margin:16px 0 0">' + d.trip.classes.map(function(c){
+        return '<button class="tab'+(c===d.cls?' on':'')+' tr-tab" data-c="'+esc(c)+'">כיתה '+esc(c)+'</button>'; }).join('') + '</div>'
+    : '';
+  return '<div class="toolbar"><button class="btn ghost" id="trAll">כל היציאות</button></div>'
+    + '<div class="tr-title"><div class="tr-name">'+esc(d.trip.name)+'</div>'
+    + '<div class="tr-meta">'+esc(niceDate(d.trip.date))+' | כיתה '+esc(d.cls)+(sub?' | '+sub:'')+'</div>'+tabs+'</div>';
+}
+function bindTripHead_(){
+  el('trAll').addEventListener('click', function(){ tripLeave_(openTrips); });
+  document.querySelectorAll('.tr-tab').forEach(function(t){
+    t.addEventListener('click', function(){ var c = t.getAttribute('data-c'); tripLeave_(function(){ openTripClass(trip.tripId, c); }); });
+  });
+}
+/* לפני מעבר מסך מוודאים שכל הסימונים נשמרו */
+function tripLeave_(fn){
+  if(!trip.outbox.length && !trip.inflight) return fn();
+  toast('שומר את הסימונים');
+  tripFlush_();
+  var tries = 0, iv = setInterval(function(){
+    tries++;
+    if(!trip.outbox.length && !trip.inflight){ clearInterval(iv); fn(); }
+    else if(tries > 40){ clearInterval(iv); toast('אין קליטה. הסימונים יישמרו כשתחזור הקליטה, אל תסגרו את הדף', true); }
+  }, 250);
+}
+
+function drawTripClass(){
+  var d = trip.cur, body = '';
+  if(!d.started){
+    if(d.canEdit){
+      var chips = TRIP_TITLES.map(function(t, i){ return '<button class="tr-chip'+(i===0?' on':'')+'" data-t="'+esc(t)+'">'+esc(t)+'</button>'; }).join('');
+      body = '<div class="panel"><div class="body">'
+        + '<h2 style="margin:0 0 8px">ספירה ראשונה</h2>'
+        + '<p class="muted" style="margin:0 0 16px;line-height:1.7">בספירה הראשונה מסמנים את מי שיוצא. מי שלא יסומן יופיע בדוח כ"לא יצא". אחרי סגירת הרשימה, כל ספירה תהיה רק על מי שברשימה.</p>'
+        + '<label>כותרת לספירה</label><div class="tr-chips">'+chips+'</div>'
+        + '<input id="trFirstTitle" value="'+esc(TRIP_TITLES[0])+'" style="margin-top:10px">'
+        + '<button class="btn gold tr-big" id="trStart">התחלת ספירה ראשונה</button>'
+        + '</div></div>';
+    } else {
+      body = '<div class="panel"><div class="body muted center" style="padding:30px">המפקד של הכיתה עוד לא התחיל ספירה ביציאה הזו.</div></div>';
+    }
+  } else if(!d.rosterClosed){
+    body = '<div class="panel"><div class="body muted center" style="padding:30px">הספירה הראשונה עדיין פתוחה. רק מפקד הכיתה יכול לסיים אותה.</div></div>';
+  } else {
+    var mem = tripMembers_(), notGoing = d.students.length - mem.length;
+    var checks = d.checks.slice().reverse().map(function(k){
+      var pres = tripPresentSet_(k), n = 0, miss = [];
+      mem.forEach(function(s){ if(pres[s.id]) n++; else if(!tripNotYet_(s, k)) miss.push(s.name); });
+      var tot = mem.filter(function(s){ return !tripNotYet_(s, k); }).length;
+      var ok = n === tot;
+      return '<div class="tr-check'+(ok?' ok':'')+'" data-k="'+esc(k.id)+'">'
+        + '<div class="tr-main"><div class="tr-name">'+esc(k.title)+'</div>'
+        + '<div class="tr-meta">'+esc(k.at)+(miss.length ? ' | חסרים: '+esc(miss.slice(0,4).join(', '))+(miss.length>4?' ועוד '+(miss.length-4):'') : ' | כולם נוכחים')+'</div></div>'
+        + '<div class="tr-count">'+n+'<small> / '+tot+'</small></div></div>';
+    }).join('');
+    body = '<div class="tr-stats"><div><b>'+mem.length+'</b><span>יצאו</span></div><div><b>'+notGoing+'</b><span>לא יצאו</span></div><div><b>'+d.checks.length+'</b><span>ספירות</span></div></div>'
+      + (d.canEdit ? '<button class="btn gold tr-big" id="trNewCheck">ספירה חדשה</button>' : '')
+      + '<div class="panel" style="margin-top:16px"><div class="head"><div><h2>ספירות</h2></div></div><div class="tr-list">'+checks+'</div></div>'
+      + '<div class="tr-actions"><button class="btn" id="trPrint">הדפסת דוח</button><button class="btn ghost" id="trXlsx">הורדת Excel</button>'
+      + (d.canEdit ? '<button class="btn ghost" id="trRoster">עריכת הרשימה</button>' : '') + '</div>';
+  }
+  el('view').innerHTML = '<div class="fade">' + tripHead_(d.rosterClosed ? ('הרשימה נסגרה ב '+esc(d.closedAt||'')) : '') + body + '</div>';
+  bindTripHead_();
+
+  document.querySelectorAll('.tr-chip').forEach(function(c){
+    c.addEventListener('click', function(){
+      document.querySelectorAll('.tr-chip').forEach(function(x){ x.classList.remove('on'); });
+      c.classList.add('on'); el('trFirstTitle').value = c.getAttribute('data-t');
+    });
+  });
+  if(el('trStart')) el('trStart').addEventListener('click', function(){
+    var b = el('trStart'); b.disabled = true;
+    callServer('tripStart', App.token, trip.tripId, trip.cls, el('trFirstTitle').value.trim()).then(function(r){
+      openTripClass(trip.tripId, trip.cls, r.checkId);
+    }).catch(function(e){ b.disabled = false; toast(e.message, true); });
+  });
+  if(el('trNewCheck')) el('trNewCheck').addEventListener('click', openTripNewCheck);
+  document.querySelectorAll('.tr-check').forEach(function(c){
+    c.addEventListener('click', function(){ drawTripCheck(c.getAttribute('data-k')); });
+  });
+  if(el('trPrint')) el('trPrint').addEventListener('click', tripPrint);
+  if(el('trXlsx')) el('trXlsx').addEventListener('click', tripExcel);
+  if(el('trRoster')) el('trRoster').addEventListener('click', openTripRoster);
+}
+
+function openTripNewCheck(){
+  var used = {}; trip.cur.checks.forEach(function(k){ used[k.title] = true; });
+  var next = TRIP_TITLES.filter(function(t){ return !used[t]; })[0] || '';
+  var chips = TRIP_TITLES.map(function(t){ return '<button class="tr-chip'+(t===next?' on':'')+'" data-t="'+esc(t)+'">'+esc(t)+'</button>'; }).join('');
+  el('modalHost').innerHTML = '<div class="modal-bg" id="tncbg"><div class="modal"><div class="m-body">'
+    + '<h3>ספירה חדשה</h3><label>כותרת</label><div class="tr-chips">'+chips+'</div>'
+    + '<input id="tncTitle" value="'+esc(next)+'" placeholder="או כתבו כותרת חופשית" style="margin-top:10px">'
+    + '<div class="m-actions"><button class="btn gold" id="tncGo">התחלת ספירה</button><button class="btn ghost" id="tncNo">ביטול</button></div>'
+    + '</div></div></div>';
+  el('tncNo').addEventListener('click', closeModal);
+  el('tncbg').addEventListener('click', function(e){ if(e.target === el('tncbg')) closeModal(); });
+  document.querySelectorAll('#tncbg .tr-chip').forEach(function(c){
+    c.addEventListener('click', function(){
+      document.querySelectorAll('#tncbg .tr-chip').forEach(function(x){ x.classList.remove('on'); });
+      c.classList.add('on'); el('tncTitle').value = c.getAttribute('data-t');
+    });
+  });
+  el('tncGo').addEventListener('click', function(){
+    var t = el('tncTitle').value.trim(); if(!t){ toast('יש לבחור כותרת לספירה', true); return; }
+    var b = el('tncGo'); b.disabled = true;
+    callServer('tripNewCheck', App.token, trip.tripId, trip.cls, t).then(function(r){
+      closeModal(); openTripClass(trip.tripId, trip.cls, r.checkId);
+    }).catch(function(e){ b.disabled = false; toast(e.message, true); });
+  });
+}
+
+/* ===== מסך ספירה ===== */
+function tripPresentSet_(k){ var m = {}; (k.present||[]).forEach(function(id){ m[id] = true; }); return m; }
+/* שוחר שצורף לרשימה אחרי הספירה לא נספר בה */
+function tripNotYet_(s, k){ return !!(s.lateAdd && s.addedAtFull && k.atFull && s.addedAtFull > k.atFull); }
+
+function drawTripCheck(checkId){
+  App.screen = 'trips';
+  var d = trip.cur, k = tripCheck_(checkId);
+  if(!k){ return drawTripClass(); }
+  trip.checkId = k.id;
+  var firstOpen = k.isFirst && !d.rosterClosed;
+  var pool = firstOpen ? d.students : tripMembers_().filter(function(s){ return !tripNotYet_(s, k); });
+  var pres = tripPresentSet_(k);
+  var n = pool.filter(function(s){ return pres[s.id]; }).length, tot = pool.length;
+  var pct = tot ? Math.round(n*100/tot) : 0;
+  var shown = trip.onlyMissing ? pool.filter(function(s){ return !pres[s.id] || s._flashAt; }) : pool;
+  var edit = d.canEdit;
+
+  var rows = shown.map(function(s){
+    var on = !!pres[s.id];
+    return '<button class="tc-row'+(on?' on':'')+flashCls_(s)+'" data-id="'+esc(s.id)+'"'+(edit?'':' disabled')+'>'
+      + '<span class="nm">'+esc(s.name)+'</span>'
+      + '<span class="tc-box">'+(on ? ic('present') : '')+'</span></button>';
+  }).join('') || '<div class="muted center" style="padding:26px">'+(trip.onlyMissing ? 'אין חסרים' : 'אין שוחרים')+'</div>';
+
+  var label = firstOpen ? 'יוצאים' : 'נוכחים';
+  el('view').innerHTML = '<div class="fade">' + tripHead_(esc(k.title)+' '+esc(k.at))
+    + '<div class="panel tc-panel">'
+    + '<div class="tc-top"><div class="tc-num"><b>'+n+'</b><span> / '+tot+'</span></div>'
+    +   '<div class="tc-lbl">'+label+(firstOpen ? '. מי שמסומן כאן נכנס לרשימת היציאה.' : '')+'</div>'
+    +   '<div class="dty-prog" style="margin-top:10px"><i style="width:'+pct+'%"></i></div>'
+    +   '<div class="tc-sync" id="tcSync"></div></div>'
+    + (edit ? '<div class="dty-tools">'
+        + '<button class="btn present" id="tcAll">'+(firstOpen ? 'כולם יוצאים' : 'כולם כאן')+'</button>'
+        + '<button class="btn ghost sm" id="tcClear">ניקוי</button>'
+        + '<button class="btn '+(trip.onlyMissing?'gold':'ghost')+' sm" id="tcMiss">'+(trip.onlyMissing?'הצגת כולם':'רק חסרים')+'</button></div>' : '')
+    + '<div class="tc-list">'+rows+'</div></div>'
+    + '<div class="tc-bar">'
+    + (firstOpen && edit
+        ? '<button class="btn gold tr-big" id="tcClose">סגירת הרשימה ('+n+' יוצאים)</button>'
+        : '<button class="btn gold tr-big" id="tcDone">סיום ספירה</button>')
+    + (!k.isFirst && edit ? '<button class="btn slim sm" id="tcDel" style="margin-top:10px">מחיקת הספירה</button>' : '')
+    + '</div></div>';
+  bindTripHead_();
+  tripSyncNote_();
+
+  document.querySelectorAll('.tc-row').forEach(function(b){
+    b.addEventListener('click', function(){ tripToggle_(k, b.getAttribute('data-id')); });
+  });
+  if(el('tcAll')) el('tcAll').addEventListener('click', function(){ tripAll_(k, true); });
+  if(el('tcClear')) el('tcClear').addEventListener('click', function(){
+    tripConfirm('ניקוי הספירה', 'כל הסימונים בספירה הזו יוסרו.', 'ניקוי', function(){ tripAll_(k, false); });
+  });
+  if(el('tcMiss')) el('tcMiss').addEventListener('click', function(){ trip.onlyMissing = !trip.onlyMissing; drawTripCheck(k.id); });
+  if(el('tcDone')) el('tcDone').addEventListener('click', function(){ trip.onlyMissing = false; tripLeave_(function(){ openTripClass(trip.tripId, trip.cls); }); });
+  if(el('tcClose')) el('tcClose').addEventListener('click', function(){
+    if(!n){ toast('לא סומן אף שוחר שיוצא', true); return; }
+    tripConfirm('סגירת הרשימה', n+' שוחרים יוצאים, '+(tot-n)+' לא יוצאים. אחרי הסגירה אפשר עדיין להוסיף שוחר לרשימה.', 'סגירת הרשימה', function(){
+      tripLeave_(function(){
+        callServer('tripClose', App.token, trip.tripId, trip.cls).then(function(){
+          toast('הרשימה נסגרה'); trip.onlyMissing = false; openTripClass(trip.tripId, trip.cls);
+        }).catch(function(e){ toast(e.message, true); });
+      });
+    });
+  });
+  if(el('tcDel')) el('tcDel').addEventListener('click', function(){
+    tripConfirm('מחיקת הספירה "'+k.title+'"', 'הספירה תימחק מהדוח.', 'מחיקה', function(){
+      tripLeave_(function(){
+        callServer('tripDeleteCheck', App.token, k.id).then(function(){ toast('הספירה נמחקה'); openTripClass(trip.tripId, trip.cls); })
+          .catch(function(e){ toast(e.message, true); });
+      });
+    });
+  });
+}
+
+function tripToggle_(k, sid){
+  var on = (k.present||[]).indexOf(sid) < 0;
+  if(on) k.present.push(sid); else k.present = k.present.filter(function(x){ return x !== sid; });
+  var s = trip.cur.students.filter(function(x){ return x.id === sid; })[0];
+  if(k.isFirst && !trip.cur.rosterClosed && s) s.member = on;
+  if(s && on) markFlash_(s);
+  trip.outbox = trip.outbox.filter(function(x){ return !(x.check === k.id && x.id === sid); });
+  trip.outbox.push({ check:k.id, id:sid, present:on });
+  drawTripCheck(k.id);
+  tripFlush_();
+}
+function tripAll_(k, on){
+  var firstOpen = k.isFirst && !trip.cur.rosterClosed;
+  var pool = firstOpen ? trip.cur.students : tripMembers_().filter(function(s){ return !tripNotYet_(s, k); });
+  k.present = on ? pool.map(function(s){ return s.id; }) : [];
+  if(firstOpen) trip.cur.students.forEach(function(s){ s.member = on; });
+  // "כולם" מחליף כל סימון קודם שעוד לא נשלח לאותה ספירה
+  trip.outbox = trip.outbox.filter(function(x){ return x.check !== k.id; });
+  trip.outbox.push({ check:k.id, all:true, present:on });
+  drawTripCheck(k.id);
+  tripFlush_();
+}
+function tripFlush_(){
+  if(trip.inflight || !trip.outbox.length) return tripSyncNote_();
+  var chk = trip.outbox[0].check;
+  var batch = trip.outbox.filter(function(x){ return x.check === chk; });
+  trip.outbox = trip.outbox.filter(function(x){ return x.check !== chk; });
+  trip.inflight = batch;
+  tripSyncNote_();
+  var items = batch.map(function(x){ return x.all ? { all:true, present:x.present } : { id:x.id, present:x.present }; });
+  callServer('tripMark', App.token, chk, items).then(function(){
+    trip.inflight = false; tripSyncNote_(); tripFlush_();
+  }).catch(function(e){
+    trip.inflight = false;
+    if(isAuthError_(e.message)){ toast(e.message, true); return; }
+    if(/רשת|fetch|network|Failed|timeout/i.test(String(e.message))){
+      trip.outbox = batch.concat(trip.outbox);   // אין קליטה: מחזירים לתור ומנסים שוב
+      tripSyncNote_(true);
+      clearTimeout(trip.retryT); trip.retryT = setTimeout(tripFlush_, 3000);
+    } else { toast(e.message, true); tripSyncNote_(); }
+  });
+}
+function tripSyncNote_(offline){
+  var n = el('tcSync'); if(!n) return;
+  var waiting = trip.outbox.length + (trip.inflight ? trip.inflight.length : 0);
+  n.className = 'tc-sync' + (offline ? ' off' : '');
+  n.textContent = offline ? 'אין קליטה. הסימונים שמורים במכשיר ויישלחו כשתחזור הקליטה'
+    : (waiting ? 'שומר' : 'כל הסימונים נשמרו');
+}
+window.addEventListener('beforeunload', function(e){
+  if(trip.outbox.length || trip.inflight){ e.preventDefault(); e.returnValue = ''; }
+});
+
+/* ===== עריכת רשימה אחרי סגירה ===== */
+function openTripRoster(){
+  var d = trip.cur;
+  var rows = d.students.map(function(s){
+    return '<div class="mg-row"><div class="mg-main"><div class="mg-name">'+esc(s.name)+'</div>'
+      + '<div class="mg-sub">'+(s.member ? ('ברשימה'+(s.lateAdd ? ', צורף ב '+esc(s.addedAt) : '')) : 'לא יצא')+'</div></div>'
+      + '<div class="mg-acts">'+(s.member
+          ? '<button class="btn slim sm trm" data-id="'+esc(s.id)+'" data-in="0">הסרה</button>'
+          : '<button class="btn gold sm trm" data-id="'+esc(s.id)+'" data-in="1">הוספה</button>')+'</div></div>';
+  }).join('');
+  el('modalHost').innerHTML = '<div class="modal-bg" id="trrbg"><div class="modal" style="max-width:560px;max-height:90vh;overflow:auto">'
+    + '<div class="dhead"><div><div class="dname">עריכת הרשימה</div><div class="dmeta">כיתה '+esc(d.cls)+'</div></div>'
+    + '<button class="btn ghost sm" id="trrClose">סגירה</button></div>'
+    + '<div class="m-body"><div class="muted" style="font-size:13px;margin-bottom:10px">שוחר שמתווסף עכשיו ייספר מהספירה הבאה והלאה.</div>'+rows+'</div></div></div>';
+  el('trrClose').addEventListener('click', function(){ closeModal(); drawTripClass(); });
+  document.querySelectorAll('.trm').forEach(function(b){
+    b.addEventListener('click', function(){
+      var add = b.getAttribute('data-in') === '1'; b.disabled = true;
+      callServer('tripMember', App.token, trip.tripId, trip.cls, b.getAttribute('data-id'), add).then(function(){
+        toast(add ? 'השוחר נוסף לרשימה' : 'השוחר הוסר מהרשימה');
+        return callServer('tripClass', App.token, trip.tripId, trip.cls).then(function(x){ trip.cur = x; openTripRoster(); });
+      }).catch(function(e){ b.disabled = false; toast(e.message, true); });
+    });
+  });
+}
+
+/* ===== דוח: לכל ספירה טבלה, עמודה A שם, עמודה B נוכחות ===== */
+function tripReportRows_(k){
+  var pres = tripPresentSet_(k);
+  return trip.cur.students.map(function(s){
+    var st, cls;
+    if(!s.member){ st = '✗ לא יצא'; cls = 'out'; }
+    else if(tripNotYet_(s, k)){ st = 'טרם צורף'; cls = 'out'; }
+    else if(pres[s.id]){ st = '✓ נוכח'; cls = 'yes'; }
+    else { st = 'לא נוכח'; cls = 'no'; }
+    return { name:s.name, st:st, cls:cls };
+  });
+}
+function tripPrint(){
+  var d = trip.cur;
+  var w = null; try { w = window.open('', '_blank'); } catch(e){}
+  var css = '@page{ size:A4 portrait; margin:14mm; } *{ box-sizing:border-box; }'
+    + 'body{ font-family:"Rubik",Arial,sans-serif; direction:rtl; color:#12263C; margin:0; }'
+    + 'h1{ font-size:20px; margin:0 0 4px; color:#0E3A66; } .meta{ font-size:12.5px; color:#3a4a5e; margin-bottom:16px; }'
+    + '.sec{ break-inside:avoid; page-break-inside:avoid; margin-bottom:18px; }'
+    + 'h2{ font-size:15px; margin:0 0 6px; color:#0E3A66; } h2 small{ font-weight:400; color:#3a4a5e; }'
+    + 'table{ width:100%; border-collapse:collapse; font-size:12.5px; } th,td{ border:0.6pt solid #0E3A66; padding:4px 8px; text-align:right; }'
+    + 'th{ background:#0E3A66; color:#fff; } td.yes{ color:#1C6A54; font-weight:700; } td.no{ color:#A22F2F; font-weight:700; } td.out{ color:#6b7a8c; }'
+    + 'col.a{ width:65%; } col.b{ width:35%; }';
+  var secs = d.checks.map(function(k){
+    var rows = tripReportRows_(k), n = rows.filter(function(r){ return r.cls==='yes'; }).length;
+    var tot = rows.filter(function(r){ return r.cls==='yes' || r.cls==='no'; }).length;
+    return '<div class="sec"><h2>'+esc(k.title)+' <small>'+esc(k.at)+' | נוכחים '+n+' מתוך '+tot+'</small></h2>'
+      + '<table><colgroup><col class="a"><col class="b"></colgroup><thead><tr><th>שם פרטי ומשפחה</th><th>נוכחות</th></tr></thead><tbody>'
+      + rows.map(function(r){ return '<tr><td>'+esc(r.name)+'</td><td class="'+r.cls+'">'+esc(r.st)+'</td></tr>'; }).join('')
+      + '</tbody></table></div>';
+  }).join('');
+  var html = '<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>'+esc(d.trip.name+' כיתה '+d.cls)+'</title>'
+    + '<style>'+css+'</style></head><body><h1>'+esc(d.trip.name)+'</h1>'
+    + '<div class="meta">כיתה '+esc(d.cls)+' | '+esc(niceDate(d.trip.date))+' | יצאו '+tripMembers_().length+' מתוך '+d.students.length+'</div>'
+    + secs + '<script>window.onload=function(){ setTimeout(function(){ window.print(); }, 300); };<\/script></body></html>';
+  if(w){ w.document.open(); w.document.write(html); w.document.close(); }
+  else toast('הדפדפן חסם חלון חדש. יש לאפשר חלונות קופצים לאתר', true);
+}
+function tripExcel(){
+  var d = trip.cur;
+  try {
+    var wb = new ExcelJS.Workbook(), used = {};
+    var line = 'FFB9C8D6', border = { top:{style:'thin',color:{argb:line}}, left:{style:'thin',color:{argb:line}}, bottom:{style:'thin',color:{argb:line}}, right:{style:'thin',color:{argb:line}} };
+    d.checks.forEach(function(k, i){
+      var nm = (k.title + ' ' + String(k.at).replace(':','.')).replace(/[\\\/\?\*\[\]:]/g, ' ').slice(0, 28);
+      while(used[nm]) nm = nm.slice(0, 26) + ' ' + (i+1);
+      used[nm] = true;
+      var ws = wb.addWorksheet(nm, { views:[{ rightToLeft:true }] });
+      ws.columns = [{ width:30 }, { width:16 }];
+      var h = ws.addRow(['שם פרטי ומשפחה', 'נוכחות']);
+      h.eachCell(function(c){ c.font = { bold:true, color:{ argb:'FFFFFFFF' } }; c.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FF0B3D66' } }; c.border = border; c.alignment = { horizontal:'right' }; });
+      tripReportRows_(k).forEach(function(r){
+        var row = ws.addRow([r.name, r.st]);
+        var fill = r.cls==='yes' ? 'FFE3F3EC' : (r.cls==='no' ? 'FFFBE3E3' : 'FFF1F3F6');
+        row.eachCell(function(c){ c.border = border; c.alignment = { horizontal:'right' }; });
+        row.getCell(2).fill = { type:'pattern', pattern:'solid', fgColor:{ argb:fill } };
+      });
+    });
+    wb.xlsx.writeBuffer().then(function(buf){
+      var blob = new Blob([buf], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      var url = URL.createObjectURL(blob), a = document.createElement('a');
+      a.href = url; a.download = d.trip.name + ' כיתה ' + d.cls + ' ' + shortDate(d.trip.date) + '.xlsx';
+      document.body.appendChild(a); a.click();
+      setTimeout(function(){ a.remove(); URL.revokeObjectURL(url); }, 1500);
+    }).catch(function(){ toast('הפקת האקסל נכשלה', true); });
+  } catch(e){ toast('הפקת האקסל נכשלה', true); }
+}
+
 /* ============ חנתר: רשימה שמית וסימון נוכח בלבד ============ */
 var duty = { data:null, filter:'', onlyLeft:false, pending:0, shown:false };
 function renderDuty(fromCache){
@@ -1932,6 +2433,7 @@ function renderCommander(fromCache){
 }
 
 function paintCommander(d){
+  App.screen = 'main';
   sortCmdByLastName_(d);
   saveScreen_(d);
   (function(){
@@ -1939,19 +2441,19 @@ function paintCommander(d){
     var p=App.profile;
     var canFuture = (p.role === 'ראש צוות' || p.role === 'מפקד שלוחה');
     var eqOn = !!d.equipmentVisible;
-    var bar = (p.canGenerate || canFuture || eqOn)
-      ? '<div class="toolbar">'
+    var oldBar = (p.canGenerate || canFuture || eqOn);
+    var bar = '<div class="toolbar">'
         + (p.canGenerate ? '<button class="btn gold" id="genBtn">הפקת דוח להיום</button>' : '')
+        + '<button class="btn ghost" id="tripsBtn">יציאות וסיורים</button>'
         + (p.canSeeAll ? '<button class="btn ghost" id="dashBtn">מבט שלוחה</button>' : '')
         + (canFuture ? '<button class="btn ghost" id="futureBtn">'+(d.futureOpen?'סגירת דיווח עתידי':'פתיחת דיווח עתידי')+'</button>' : '')
-        + '<button class="btn ghost" id="bulkBtn">דיווח גורף</button>'
+        + (oldBar ? '<button class="btn ghost" id="bulkBtn">דיווח גורף</button>' : '')
         + (canFuture ? '<button class="btn ghost" id="lockBtn">'+((d.dayLock&&d.dayLock.locked)?'ביטול נעילת היום':'נעילת היום')+'</button>' : '')
         + (canFuture ? '<button class="btn ghost" id="manageBtn">ניהול שוחרים</button>' : '')
         + ((p.role==='ראש צוות'||p.role==='מפקד שלוחה') ? '<button class="btn ghost" id="manageCmdBtn">ניהול מדריכים</button>' : '')
         + ((p.role==='ראש צוות'||p.role==='מפקד שלוחה') ? '<button class="btn ghost" id="backupBtn">גיבוי היסטוריה</button>' : '')
         + (eqOn ? '<button class="btn ghost" id="ordersBtn">תכלול הזמנות</button>' : '')
-        + '</div>'
-      : '';
+        + '</div>';
     if(!d.classes.length){
       el('view').innerHTML='<div class="fade">'+bar+'<div class="panel"><div class="body muted">לא משויכות אליך כיתות לצפייה.</div></div></div>';
       bindCmdTop(); return;
@@ -1970,6 +2472,7 @@ function paintCommander(d){
 }
 function bindCmdTop(){
   if(el('genBtn')) el('genBtn').addEventListener('click', openGenerate);
+  if(el('tripsBtn')) el('tripsBtn').addEventListener('click', openTrips);
   if(el('dashBtn')) el('dashBtn').addEventListener('click', renderDashboard);
   if(el('futureBtn')) el('futureBtn').addEventListener('click', function(){
     toggleFuture(!!(cmdState.data && cmdState.data.futureOpen));
@@ -2042,6 +2545,7 @@ function bindCheckoutApprove_(){
   }); });
 }
 function renderClassPane(){
+  if(!el('classPane') || !cmdState.data) return;   // לא במסך הראשי
   var c = cmdState.data.classes[cmdState.active], statuses = cmdState.data.statuses, ok = c.canApprove;
 
   var visible = c.students.filter(function(s){
@@ -2526,7 +3030,7 @@ function renderTabs(){
 }
 
 /* ============ מבט שלוחה ============ */
-function renderDashboard(){ el('view').innerHTML=spinner();
+function renderDashboard(){ App.screen = 'dash'; el('view').innerHTML=spinner();
   callServer('branchOverview', App.token, App.date).then(function(d){
     var totM=0,totP=0,totA=0,totL=0;
     d.classes.forEach(function(c){ totM+=c.matzevet; totP+=c.present; totA+=c.absent; totL+=c.late; });
@@ -2585,6 +3089,7 @@ function runGenerate(force, dateOverride){
 
 function showReport(r){
   closeModal();
+  App.screen = 'report';
   App.lastReport = r.preview;
   var repD = (r.preview && r.preview.date) || App.date;
   el('stripDate').innerHTML = (repD === App.date) ? '<b>'+niceDate(repD)+'</b>' : 'דוח לתאריך <b>'+niceDate(repD)+'</b>';
