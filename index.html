@@ -810,6 +810,24 @@
   @media (prefers-reduced-motion: reduce){
     *, *::before, *::after{ animation-duration:.001s !important; animation-delay:0s !important; transition-duration:.001s !important; }
   }
+
+  /* ============ מסך חנתר ============ */
+  .dty-tools{display:flex; gap:10px; align-items:center; padding:14px 18px; border-bottom:1px solid var(--line-2); flex-wrap:wrap;}
+  .dty-tools input{flex:1 1 200px; max-width:360px;}
+  .dty-prog{height:8px; background:var(--line-2); border-radius:99px; overflow:hidden;}
+  .dty-prog i{display:block; height:100%; background:var(--present); border-radius:99px; transition:width .35s ease;}
+  .dty-sec{padding:10px 18px; background:var(--sky-soft); color:var(--navy); font-weight:700; font-size:14.5px;}
+  .dty-row{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 18px; min-height:62px; border-bottom:1px solid var(--line-2);}
+  .dty-row:last-child{border-bottom:none;}
+  .dty-row .nm{font-weight:600; font-size:16.5px; color:var(--ink);}
+  .dty-row.done .nm{color:var(--muted);}
+  .dty-row .btn.present{min-width:112px; padding:12px 20px; font-size:16px; border-radius:10px;}
+  .dty-done{display:inline-flex; align-items:center; gap:6px; color:var(--present); font-weight:700; font-size:14px;}
+  .dty-done svg{width:18px; height:18px;}
+  .dty-none{color:var(--muted); font-size:13.5px;}
+  .enter .dty-row{animation:enterUp .3s cubic-bezier(.2,.7,.2,1) both;}
+  .dty-row.flash{animation:flashOk 1.1s ease-out both;}
+  body.quiet .enter .dty-row{animation:none;}
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -974,6 +992,8 @@ var RPC_MAP = {
   generateReport:      ['generate_report',       ['p_token','p_date']],
   nadonInfo:           ['nadon_info',            ['p_token','p_student','p_date']],
   nadonYearInfo:       ['nadon_year_info',       ['p_token','p_student']],
+  dutyGetRoster:       ['duty_get_roster',       ['p_token']],
+  dutyMarkPresent:     ['duty_mark_present',     ['p_token','p_ids']],
   studentDashboard:    ['student_dashboard',     ['p_token','p_student','p_date']],
   monthLog:            ['month_log',             ['p_token','p_student','p_year','p_month']],
   branchOverview:      ['branch_overview',       ['p_token','p_date']],
@@ -1132,6 +1152,7 @@ function doLogin(){
 /* רענון שקט מיד אחרי הצגה מהמטמון, כדי שהנתונים יהיו עדכניים בלי שהמשתמש ימתין. */
 function refreshNow_(){
   if(!App.token || !App.profile) return;
+  if(App.profile.kind === 'duty'){ callServer('dutyGetRoster', App.token).then(function(d){ saveScreen_(d); if(!busyNow()) paintDuty(d); }).catch(function(){}); return; }
   var isStu = (App.profile.kind === 'student');
   var action = isStu ? 'studentGetDay' : 'commanderGetClasses';
   var d = isStu ? (stuDate || App.date) : App.date;
@@ -1197,9 +1218,10 @@ function enterPortal(){
   el('login').classList.add('hidden'); el('portal').classList.remove('hidden');
   var p=App.profile;
   el('whoName').textContent = p.name||'';
-  el('whoRole').textContent = p.kind==='student' ? ('כיתה '+p.cls) : (p.role + (p.rank?(' | '+p.rank):''));
+  el('whoRole').textContent = p.kind==='student' ? ('כיתה '+p.cls) : (p.kind==='duty' ? ('חנתר | כיתה '+(p.classes||[]).join(', ')) : (p.role + (p.rank?(' | '+p.rank):'')));
   el('stripDate').innerHTML = '<b>'+niceDate(App.date)+'</b>';
   el('stripScope').innerHTML = p.kind==='student' ? 'דיווח אישי'
+    : p.kind==='duty' ? ('סימון נוכחות <b>כיתה '+esc((p.classes||[]).join(', '))+'</b>')
     : ('היקף אחריות <b>'+(p.canSeeAll ? 'כלל השלוחה' : ('כיתות '+p.classes.join(', ')))+'</b>');
   var vn = el('verNote');
   if(vn){ vn.textContent = ''; }
@@ -1231,6 +1253,7 @@ window.addEventListener('beforeunload', function(e){
 function isDesktop_(){ return window.matchMedia('(min-width:900px)').matches; }
 function route(fromCache){
   if(el('stripDate') && App.date) el('stripDate').innerHTML = '<b>'+niceDate(App.date)+'</b>';   // חזרה מדוח של תאריך אחר
+  if(App.profile.kind==='duty') return renderDuty(fromCache);
   return App.profile.kind==='student' ? renderStudent(fromCache) : renderCommander(fromCache);
 }
 
@@ -1265,6 +1288,7 @@ function snapshotOfCurrent(){
     if(App.profile.kind === 'student'){
       return stu.day ? JSON.stringify(stu.day) : null;
     }
+    if(App.profile.kind === 'duty'){ return duty.data ? JSON.stringify(duty.data) : null; }
     return cmdState.data ? JSON.stringify({date:cmdState.data.date, statuses:cmdState.data.statuses,
       profile:cmdState.data.profile, classes:cmdState.data.classes}) : null;
   } catch(e){ return null; }
@@ -1277,6 +1301,7 @@ function stopPolling(){
 function busyNow(){
   if(document.hidden) return true;                 // הכרטיסייה ברקע
   if(typeof INFLIGHT !== 'undefined' && INFLIGHT) return true;  // שמירה נשלחת כרגע
+  if(typeof duty !== 'undefined' && duty.pending > 0) return true;  // סימון חנתר נשלח כרגע
   if(pendingCount() > 0) return true;              // יש שמירה בתור
   if(typeof anyEditing === 'function' && anyEditing()) return true;
   if(el('modalHost') && el('modalHost').innerHTML.trim()) return true;  // חלון פתוח
@@ -1291,7 +1316,7 @@ var pollInFlight = false;
 /* שמירת תמונת המסך האחרונה מקומית, כדי שכניסה חוזרת תציג נתונים מיד. */
 function snapKey_(){
   try {
-    var k = App.profile.kind === 'student' ? ('stu_'+App.profile.id) : ('cmd_'+App.profile.id);
+    var k = App.profile.kind === 'student' ? ('stu_'+App.profile.id) : ((App.profile.kind === 'duty' ? 'duty_' : 'cmd_')+App.profile.id);
     return 'dohehad_snap_' + k + '_' + App.date;
   } catch(e){ return null; }
 }
@@ -1308,8 +1333,9 @@ function pollTick(){
   if(!App.token || busyNow() || pollInFlight) return;
   pollInFlight = true;
   var isStu = (App.profile.kind === 'student');
+  var isDuty = (App.profile.kind === 'duty');
   var pollDate = isStu ? (stuDate || App.date) : App.date;
-  var action = isStu ? 'studentGetDay' : 'commanderGetClasses';
+  var action = isStu ? 'studentGetDay' : (isDuty ? 'dutyGetRoster' : 'commanderGetClasses');
   callServer(action, App.token, pollDate).then(function(d){
     if(busyNow()) return;               // המצב השתנה בזמן הבקשה
     var snap = JSON.stringify(d);
@@ -1319,7 +1345,9 @@ function pollTick(){
     saveSnap_(d);
 
     quietPaint_();
-    if(App.profile.kind === 'student'){
+    if(isDuty){
+      paintDuty(d);
+    } else if(App.profile.kind === 'student'){
       paintStudent(d);
     } else {
       // שומרים את הכרטיסייה הפעילה כדי לא לקפוץ לכיתה אחרת
@@ -1798,6 +1826,93 @@ function nowHM(){
 
 /* ============ מסך מפקד ============ */
 var cmdState={data:null, active:0};
+
+/* ============ חנתר: רשימה שמית וסימון נוכח בלבד ============ */
+var duty = { data:null, filter:'', onlyLeft:false, pending:0, shown:false };
+function renderDuty(fromCache){
+  if(fromCache && App.initial){ var c0 = App.initial; App.initial = null; paintDuty(c0); return; }
+  if(!duty.data) el('view').innerHTML = spinner();
+  callServer('dutyGetRoster', App.token).then(function(d){ saveScreen_(d); paintDuty(d); })
+    .catch(function(e){ if(isAuthError_(e.message)) return sessionExpired_('החיבור פג, יש להתחבר שוב');
+      el('view').innerHTML='<div class="panel"><div class="body">'+esc(e.message)+'</div></div>'; });
+}
+function paintDuty(d){
+  // שומרים סימון שעוד נשלח, כדי שרענון לא יחזיר אותו אחורה
+  if(duty.data){
+    var keep = {};
+    duty.data.classes.forEach(function(c){ c.students.forEach(function(s){ if(s._pending || s._flashAt) keep[s.id] = s; }); });
+    d.classes.forEach(function(c){ c.students.forEach(function(s){ var k = keep[s.id]; if(k){ if(k._pending) s.reported = true; s._pending = k._pending; s._flashAt = k._flashAt; } }); });
+  }
+  duty.data = d;
+  drawDuty();
+}
+function dutyFind_(id){
+  var f = null;
+  duty.data.classes.forEach(function(c){ c.students.forEach(function(s){ if(s.id===id) f = s; }); });
+  return f;
+}
+function drawDuty(){
+  var d = duty.data; if(!d) return;
+  var total = 0, done = 0;
+  d.classes.forEach(function(c){ c.students.forEach(function(s){ total++; if(s.reported) done++; }); });
+  var pct = total ? Math.round(done*100/total) : 0;
+  var f = duty.filter.trim();
+  var enter = !duty.shown; duty.shown = true;
+
+  var secs = d.classes.map(function(c){
+    var canMark = !d.locked && c.open;
+    var list = c.students.filter(function(s){
+      return (!f || s.name.indexOf(f) >= 0) && (!duty.onlyLeft || !s.reported || s._flashAt);
+    });
+    var rows = list.map(function(s){
+      var right = s.reported
+        ? '<span class="dty-done">'+ic('present')+(s._pending ? 'נשלח' : 'דווח')+'</span>'
+        : (canMark ? '<button class="btn present dty-mark" data-id="'+esc(s.id)+'">נוכח</button>'
+                   : '<span class="dty-none">לא דווח</span>');
+      return '<div class="dty-row'+(s.reported?' done':'')+flashCls_(s)+'"><span class="nm">'+esc(s.name)+'</span>'+right+'</div>';
+    }).join('') || '<div class="muted center" style="padding:26px">'+(f ? 'לא נמצא שוחר בשם הזה' : 'כל השוחרים סומנו')+'</div>';
+    var note = d.locked ? ''
+      : (!c.open ? '<div class="banner warn" style="margin:12px 18px">חלף מועד הנוכחות לכיתה '+esc(c.cls)+' ('+esc(c.cutoff)+'). סימון נוסף נעשה רק על ידי המק"ס.</div>' : '');
+    return (d.classes.length > 1 ? '<div class="dty-sec">כיתה '+esc(c.cls)+'</div>' : '') + note + rows;
+  }).join('');
+
+  el('view').innerHTML = '<div class="fade"><div class="panel">'
+    + '<div class="head"><div style="width:100%"><h2>סימון נוכחות</h2>'
+    +   '<div class="sub" style="margin-top:6px">סומנו <b>'+done+'</b> מתוך <b>'+total+'</b>. כל סימון עובר לאישור המק"ס.</div>'
+    +   '<div class="dty-prog" style="margin-top:12px"><i style="width:'+pct+'%"></i></div></div></div>'
+    + (d.locked ? '<div class="banner warn" style="margin:14px 18px">היום נעול לדיווח. '+esc(d.lockMessage||'')+'</div>' : '')
+    + '<div class="dty-tools"><input id="dtySearch" placeholder="חיפוש שוחר בשם" value="'+esc(duty.filter)+'">'
+    +   '<button class="btn '+(duty.onlyLeft?'gold':'ghost')+' sm" id="dtyLeft">'+(duty.onlyLeft?'הצגת כולם':'רק מי שטרם סומן')+'</button></div>'
+    + '<div class="dty-list'+(enter?' enter':'')+'">'+secs+'</div>'
+    + '</div></div>';
+
+  var si = el('dtySearch');
+  si.addEventListener('input', function(){ duty.filter = si.value; var pos = si.selectionStart; drawDuty(); var n = el('dtySearch'); n.focus(); n.setSelectionRange(pos,pos); });
+  el('dtyLeft').addEventListener('click', function(){ duty.onlyLeft = !duty.onlyLeft; drawDuty(); });
+  document.querySelectorAll('.dty-mark').forEach(function(b){
+    b.addEventListener('click', function(){ dutyMark_(b.getAttribute('data-id')); });
+  });
+}
+function dutyMark_(id){
+  var st = dutyFind_(id);
+  if(!st || st.reported) return;
+  st.reported = true; st._pending = true; markFlash_(st);
+  duty.pending++;
+  drawDuty();
+  callServer('dutyMarkPresent', App.token, [id]).then(function(r){
+    var res = (r && r.results && r.results[0]) || { ok:false, error:'שגיאה' };
+    if(!res.ok){ st.reported = false; toast(st.name + ': ' + res.error, true); }
+  }).catch(function(e){
+    st.reported = false;
+    if(isAuthError_(e.message)){ duty.pending--; return sessionExpired_('החיבור פג, יש להתחבר שוב'); }
+    toast(e.message, true);
+  }).then(function(){
+    if(!App.token) return;
+    st._pending = false; if(duty.pending > 0) duty.pending--;
+    setTimeout(function(){ st._flashAt = 0; }, 1000);
+    drawDuty();
+  });
+}
 function renderCommander(fromCache){
   if(fromCache && App.initial){ var c0 = App.initial; App.initial = null; saveSnap_(c0); return paintCommander(c0); }
   var cached = readSnap_();
@@ -1872,6 +1987,11 @@ function bindCmdTop(){
 }
 
 var filterText = '';
+
+/* מי סימן את הדיווח, למשל חנתר */
+function reportedByInfo_(s){
+  return (s.reportedBy && !s.noReport) ? '<div class="apinfo">סומן על ידי '+esc(s.reportedBy)+'</div>' : '';
+}
 
 /* מיון לפי שם משפחה ואחר כך שם פרטי. השרת שולח שם משפחה בנפרד; אם אין, שם המשפחה הוא מה שאחרי המילה הראשונה */
 var LAST_NAME_MAP_ = {};
@@ -1949,7 +2069,7 @@ function renderClassPane(){
     return '<tr class="'+(s.noReport?'norep ':'')+(s.saving?'rowsaving':'')+flashCls_(s)+'">'
       + '<td><span class="idx">'+(c.students.indexOf(s)+1)+'.</span> <a class="name namelink" data-id="'+esc(s.id)+'" href="#">'+esc(s.name)+'</a>'+candle+'</td>'
       + '<td>'+sel+'</td><td style="min-width:180px">'+reason+'</td>'
-      + '<td><span class="approval '+apCls+'">'+esc(apTxt)+'</span>'+approvedInfo(s)+coCell(s)+'</td>'
+      + '<td><span class="approval '+apCls+'">'+esc(apTxt)+'</span>'+approvedInfo(s)+reportedByInfo_(s)+coCell(s)+'</td>'
       + '<td>'+actions+'</td></tr>';
   }).join('');
 
@@ -2026,6 +2146,7 @@ function renderClassPane(){
       + '<span class="nm"><span class="idx">'+idx+'.</span><a class="namelink" data-id="'+esc(s.id)+'" href="#">'+esc(s.name)+'</a>'+candle+'</span>'
       + '<span class="approval '+apCls+'">'+esc(apTxt)+'</span></div>'
       + approvedInfoCard(s)
+      + (s.reportedBy && !s.noReport ? '<div class="muted" style="font-size:12.5px;margin:-4px 0 10px">סומן על ידי '+esc(s.reportedBy)+'</div>' : '')
       + '<div class="cur"><span class="muted">סטטוס</span><span class="chip">'+esc(s.status || 'טרם דווח')+'</span>'
       +   (s.noReport ? '<button class="btn present qp act-present" data-id="'+esc(s.id)+'">✓ נוכח</button>' : '')
       +   '<button class="chg mtoggle" data-id="'+esc(s.id)+'">'+(picking?'סגירה':'שינוי')+'</button></div>'
@@ -3623,7 +3744,7 @@ function drawManageCmd(){
       : '<span class="muted" style="font-size:12.5px">'+(c.isSelf?'זהו המשתמש שלך':'אין הרשאה')+'</span>';
     return '<div class="mg-row'+(c.active?'':' mg-off')+'">'
       + '<div class="mg-main"><div class="mg-name">'+esc(c.full_name)+(c.active?'':' <span class="mg-badge">לא פעיל</span>')+'</div>'
-      + '<div class="mg-sub">'+esc(c.role)+' | מ.א '+esc(c.personal_number)+' | '+esc(cls)+' | '+pw+'</div></div>'
+      + '<div class="mg-sub">'+esc(c.role)+' | '+(c.role==='חנתר'?'קוד ':'מ.א ')+esc(c.personal_number)+' | '+esc(cls)+' | '+pw+'</div></div>'
       + '<div class="mg-acts">'+acts+'</div></div>';
   }).join('') || '<div class="muted center" style="padding:26px">לא נמצא מפקד</div>';
 
@@ -3664,20 +3785,38 @@ function editCommander(id){
     + '<h3>'+(id?'עריכת מדריך':'הוספת מדריך')+'</h3>'
     + '<label>שם מלא</label><input id="ecName" value="'+esc(c.full_name)+'">'
     + '<label style="margin-top:10px">דרגה</label><input id="ecRank" value="'+esc(c.rank||'')+'">'
-    + '<label style="margin-top:10px">מספר אישי</label><input id="ecPn" value="'+esc(c.personal_number)+'">'
+    + '<label style="margin-top:10px" id="ecPnLbl">מספר אישי</label><input id="ecPn" value="'+esc(c.personal_number)+'">'
     + '<label style="margin-top:10px">תפקיד</label><select id="ecRole">'+roleOpts+'</select>'
+    + '<div class="muted" id="ecRoleHint" style="font-size:12.5px;margin-top:6px;line-height:1.6"></div>'
     + '<label style="margin-top:10px">כיתות באחריות</label><div class="chk-grid">'+classChecks+'</div>'
     + '<label style="margin-top:10px">סיסמה '+(id?'<span class="muted" style="font-weight:400">(השאירו ריק כדי לא לשנות)</span>':'')+'</label>'
     + '<input id="ecPw" type="password" placeholder="'+(id?'ללא שינוי':'קביעת סיסמה')+'">'
     + '<div class="m-actions"><button class="btn gold" id="ecSave">שמירה</button><button class="btn ghost" id="ecCancel">ביטול</button></div>'
     + '</div></div></div>';
   el('ecCancel').addEventListener('click', drawManageCmd);
+  var ROLE_HINT = {
+    'חנתר':'חניך תורן. רואה רשימה שמית של הכיתה ומסמן נוכח בלבד, להיום בלבד. לא רואה נתונים, היסטוריה או מספרים מזהים. חובה סיסמה וכיתה.',
+    'מורה':'מדווח ומאשר נוכחות כמו מק"ס, מפיק דוח נעדרים ומאחרים לכיתות שלו, ורואה נתונים על שוחרי כיתותיו בלבד.',
+    'מק"ס':'מדווח ומאשר נוכחות לכיתות שבאחריותו.',
+    'עוזר':'מדווח ומאשר נוכחות לכיתות שבאחריותו, ללא שינוי שעת הנוכחות.',
+    'ראש צוות':'רואה ומנהל את כל השלוחה.',
+    'מפקד שלוחה':'רואה ומנהל את כל השלוחה, כולל ראשי צוות.'
+  };
+  function syncRole(){
+    var r = el('ecRole').value, isDuty = (r === 'חנתר');
+    el('ecRoleHint').textContent = ROLE_HINT[r] || '';
+    el('ecPnLbl').textContent = isDuty ? 'קוד משתמש (לא מספר של שוחר)' : 'מספר אישי';
+    el('ecPw').placeholder = isDuty ? (id && c.hasPassword ? 'ללא שינוי' : 'חובה לקבוע סיסמה') : (id ? 'ללא שינוי' : 'קביעת סיסמה');
+  }
+  el('ecRole').addEventListener('change', syncRole); syncRole();
   el('ecSave').addEventListener('click', function(){
     var name=el('ecName').value.trim(), rank=el('ecRank').value.trim(), pn=el('ecPn').value.trim(),
         role=el('ecRole').value, pw=el('ecPw').value,
         classes=Array.prototype.slice.call(document.querySelectorAll('.mc-cls:checked')).map(function(x){return x.value;});
     if(!name){ toast('חובה שם מלא', true); return; }
-    if(!pn){ toast('חובה מספר אישי', true); return; }
+    if(!pn){ toast(role==='חנתר' ? 'חובה קוד משתמש' : 'חובה מספר אישי', true); return; }
+    if(role==='חנתר' && !classes.length){ toast('יש לבחור כיתה לחנתר', true); return; }
+    if(role==='חנתר' && !pw && !(id && c.hasPassword)){ toast('לחנתר חובה לקבוע סיסמה', true); return; }
     var btn=el('ecSave'); btn.disabled=true; btn.textContent='שומר';
     callServer('adminSaveCommander', App.token, id||'', name, rank, pn, role, classes, pw).then(function(){
       toast(id?'המדריך עודכן':'המדריך נוסף'); openManageCmd();
