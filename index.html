@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>דו"ח אחד</title>
+<link rel="icon" type="image/png" sizes="64x64" href="favicon.png?v=2">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=2">
+<link rel="shortcut icon" href="favicon.png?v=2">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=2">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Miriam+Libre:wght@400;700&family=Rubik:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -871,15 +875,57 @@
   .tc-bar{position:sticky; bottom:0; padding:10px 0 calc(10px + env(safe-area-inset-bottom)); background:linear-gradient(transparent, var(--paper) 30%); z-index:5; display:flex; flex-direction:column; align-items:center;}
   .tc-bar .tr-big{margin-top:6px;}
   @media(max-width:620px){ .tr-stats b{font-size:24px;} .tr-name{font-size:17px;} }
+
+  /* ============ מערכת שעות ============ */
+  .sc-head{margin:0 0 16px;} .sc-head h2{font-family:var(--display); font-size:24px; margin:0; color:var(--navy);} .sc-head .sub{margin-top:4px;}
+  .sc-none{opacity:.55;}
+  .sc-empty-acts{display:flex; gap:10px; justify-content:center; flex-wrap:wrap;}
+  .sc-editbar{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:12px; font-size:13px;}
+  .sc-editbar .muted{flex:1 1 260px;}
+  .sc-wrap{overflow-x:auto;}
+  .sc-tbl{width:100%; border-collapse:separate; border-spacing:0; table-layout:fixed; min-width:760px;}
+  .sc-tbl th, .sc-tbl td{border-bottom:1px solid var(--line-2); border-inline-start:1px solid var(--line-2); padding:10px 10px; vertical-align:top; text-align:right;}
+  .sc-tbl thead th{background:var(--navy); color:#fff; font-weight:700; font-size:14.5px; text-align:center; position:sticky; top:0; z-index:1;}
+  .sc-tbl thead th.today{background:var(--blue);} .sc-tbl thead th small{font-weight:500; opacity:.85;}
+  .sc-tbl th.sc-ph{width:92px; background:var(--sky-soft); color:var(--navy); text-align:center;}
+  .sc-tbl thead th.sc-ph{background:var(--navy-deep); color:#fff;}
+  .sc-tbl tbody th.sc-ph b{display:block; font-family:var(--display); font-size:20px; line-height:1.1;}
+  .sc-tbl tbody th.sc-ph span{display:block; font-size:12px; color:var(--muted); font-weight:600; direction:ltr; margin-top:2px;}
+  .sc-tbl td.today{background:#F5FAFE;}
+  .sc-tbl td.now{background:#E6F2FB; box-shadow:inset 0 0 0 2px var(--blue);}
+  .sc-s{font-weight:700; color:var(--ink); font-size:14.5px; line-height:1.35;}
+  .sc-t{font-size:13px; color:var(--slate); margin-top:3px; line-height:1.35;}
+  .sc-g{font-size:12px; color:var(--muted); margin-top:2px; line-height:1.35;}
+  .sc-k{display:inline-block; margin-top:5px; font-size:11px; font-weight:700; color:var(--late); background:#FBF1DC; border-radius:99px; padding:1px 8px;}
+  .sc-ed{cursor:pointer; transition:background .12s ease;} .sc-ed:hover{background:var(--sky-soft) !important;}
+  .sc-ed-p{cursor:pointer;} .sc-plus{color:var(--line); font-size:22px; font-weight:300;}
+  .sc-mob{display:none;}
+  .sc-days{display:flex; gap:6px; overflow-x:auto; padding:2px 0 12px; scrollbar-width:none;}
+  .sc-day{flex:1 1 0; min-width:58px; border:1px solid var(--line); background:#fff; border-radius:99px; padding:9px 6px; font-size:14px; font-weight:700; color:var(--ink); white-space:nowrap;}
+  .sc-day.today{border-color:var(--blue);} .sc-day.on{background:var(--navy); border-color:var(--navy); color:#fff;}
+  .sc-item{display:flex; gap:14px; align-items:flex-start; padding:12px 16px; border-bottom:1px solid var(--line-2);}
+  .sc-item:last-child{border-bottom:none;}
+  .sc-item.empty .sc-what{padding-top:6px;}
+  .sc-item.now{background:#E6F2FB; box-shadow:inset 3px 0 0 var(--blue);}
+  .sc-when{flex:0 0 82px; text-align:center; background:var(--sky-soft); border-radius:10px; padding:6px 4px;}
+  .sc-when b{display:block; font-family:var(--display); font-size:19px; color:var(--navy); line-height:1.1;}
+  .sc-when span{display:block; font-size:11px; color:var(--muted); font-weight:600; direction:ltr; white-space:nowrap;}
+  .sc-when em{display:block; font-style:normal; font-size:11px; font-weight:700; color:var(--blue); margin-top:2px;}
+  .sc-what{flex:1 1 auto; min-width:0;}
+  @media(max-width:760px){ .sc-desk{display:none;} .sc-mob{display:block;} }
+  .scc .body{padding-top:6px;}
+  .scc-row{display:flex; align-items:center; gap:12px; padding:9px 0; border-bottom:1px solid var(--line-2);}
+  .scc-row:last-child{border-bottom:none;}
+  .scc-row.now{background:#E6F2FB; border-radius:8px; padding-inline:8px;}
+  .scc-n{flex:0 0 26px; height:26px; border-radius:50%; background:var(--sky-soft); color:var(--navy); font-weight:700; font-size:13px; display:flex; align-items:center; justify-content:center;}
+  .scc-s{flex:1 1 auto; font-weight:600; font-size:15px;}
+  .scc-time{font-size:12.5px; color:var(--muted); direction:ltr;}
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <link rel="manifest" href="manifest.webmanifest">
   <meta name="theme-color" content="#0B3D66">
-  <link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
-  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
 </head>
 <body>
 
@@ -1049,6 +1095,8 @@ var RPC_MAP = {
   tripDeleteCheck:     ['trip_delete_check',     ['p_token','p_check']],
   tripMark:            ['trip_mark',             ['p_token','p_check','p_items']],
   tripMember:          ['trip_member',           ['p_token','p_trip','p_class','p_student','p_in']],
+  schedGet:            ['schedule_get',          ['p_token','p_class']],
+  schedSave:           ['schedule_save',         ['p_token','p_class','p_data','p_source']],
   studentDashboard:    ['student_dashboard',     ['p_token','p_student','p_date']],
   monthLog:            ['month_log',             ['p_token','p_student','p_year','p_month']],
   branchOverview:      ['branch_overview',       ['p_token','p_date']],
@@ -1886,6 +1934,359 @@ function nowHM(){
 var cmdState={data:null, active:0};
 
 
+/* ============ מערכת שעות ============
+   טבלה אמיתית לכל כיתה. במחשב טבלה שבועית, בטלפון יום אחד בכל פעם עם בחירת יום.
+   עריכה בלחיצה על תא, והעלאת קובץ PDF של Smart School שמתפענח לטבלה. */
+var sched = { res:null, edit:false, day:null, my:null, myAt:0 };
+var SCHED_DAYS = ['ראשון','שני','שלישי','רביעי','חמישי','שישי'];
+var SCHED_KINDS = ['הוראה','פרטני','תגבור','שהייה','מילוי מקום'];
+var SCHED_STD_TIMES = ['8:15-8:25','8:25-9:10','9:10-9:55','10:15-11:00','11:05-11:50','12:00-12:45','12:50-13:35','13:50-14:35','14:40-15:25','15:25-16:10','16:10-16:55'];
+
+function schedTodayName_(){ return ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'][new Date().getDay()]; }
+function schedNowIdx_(data){
+  var now = new Date(), m = now.getHours()*60 + now.getMinutes(), idx = -1;
+  (data.periods||[]).forEach(function(p, i){
+    var t = String(p.time||'').match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+    if(t && m >= (+t[1])*60 + (+t[2]) && m < (+t[3])*60 + (+t[4])) idx = i;
+  });
+  return idx;
+}
+function schedCellHtml_(c){
+  if(!c || !(c.s||c.t||c.g)) return '';
+  return '<div class="sc-s">'+esc(c.s)+'</div>'
+    + (c.t ? '<div class="sc-t">'+esc(c.t)+'</div>' : '')
+    + (c.g ? '<div class="sc-g">'+esc(c.g)+'</div>' : '')
+    + (c.k && c.k !== 'הוראה' ? '<span class="sc-k">'+esc(c.k)+'</span>' : '');
+}
+
+function openSched(cls){
+  App.screen = 'sched';
+  el('view').innerHTML = spinner();
+  callServer('schedGet', App.token, cls || '').then(function(r){
+    sched.res = r;
+    if(sched.day == null || !r.data || sched.day >= r.data.days.length){
+      var ti = r.data ? r.data.days.indexOf(schedTodayName_()) : -1;
+      sched.day = ti >= 0 ? ti : 0;
+    }
+    if(!r.canEdit) sched.edit = false;
+    drawSched();
+  }).catch(function(e){ toast(e.message, true); App.screen = null; route(); });
+}
+
+function drawSched(){
+  var r = sched.res, data = r.data, edit = sched.edit && r.canEdit;
+  var tabs = r.classes.length > 1
+    ? '<div class="classtabs" style="margin:6px 0 18px">' + r.classes.map(function(c){
+        return '<button class="tab'+(c.cls===r.cls?' on':'')+(c.has?'':' sc-none')+' sc-tab" data-c="'+esc(c.cls)+'">'+esc(c.cls)+'</button>'; }).join('') + '</div>'
+    : '';
+  var tools = '<div class="toolbar"><button class="btn ghost" id="scBack">חזרה</button>'
+    + (r.canEdit && data ? '<button class="btn '+(edit?'gold':'ghost')+'" id="scEdit">'+(edit?'סיום עריכה':'עריכה')+'</button>' : '')
+    + (r.canEdit ? '<button class="btn ghost" id="scUpload">העלאת מערכת מ PDF</button>' : '')
+    + '<input type="file" id="scFile" accept="application/pdf,.pdf" hidden></div>';
+  var meta = data ? ('עודכן '+esc(shortDate((r.updatedAt||'').slice(0,10)))+(r.updatedBy?' על ידי '+esc(r.updatedBy):'')) : '';
+  var head = '<div class="sc-head"><h2>מערכת שעות כיתה '+esc(r.cls)+'</h2>'+(meta?'<div class="sub">'+meta+'</div>':'')+'</div>';
+
+  var body;
+  if(!data){
+    body = '<div class="panel"><div class="body center" style="padding:36px 20px">'
+      + '<div class="muted" style="margin-bottom:16px">עוד לא הועלתה מערכת שעות לכיתה '+esc(r.cls)+'.</div>'
+      + (r.canEdit ? '<div class="sc-empty-acts"><button class="btn gold" id="scUpload2">העלאת קובץ PDF</button><button class="btn ghost" id="scBuild">בנייה ידנית</button></div>' : '')
+      + '</div></div>';
+  } else {
+    var todayCol = data.days.indexOf(schedTodayName_());
+    var nowIdx = todayCol >= 0 ? schedNowIdx_(data) : -1;
+    // מחשב: טבלה שבועית
+    var thead = '<tr><th class="sc-ph">שעה</th>' + data.days.map(function(d, di){
+      return '<th class="'+(di===todayCol?'today':'')+'">'+esc(d)+(di===todayCol?' <small>היום</small>':'')+'</th>'; }).join('') + '</tr>';
+    var tbody = data.periods.map(function(p, pi){
+      return '<tr><th class="sc-ph'+(edit?' sc-ed-p':'')+'" data-p="'+pi+'"><b>'+esc(p.n)+'</b><span>'+esc(p.time||'')+'</span></th>'
+        + data.days.map(function(d, di){
+            var c = data.cells[pi][di];
+            var cls = (di===todayCol?' today':'') + (di===todayCol && pi===nowIdx?' now':'') + (edit?' sc-ed':'') + (c?'':' empty');
+            return '<td class="'+cls+'" data-p="'+pi+'" data-d="'+di+'">'+(schedCellHtml_(c) || (edit?'<span class="sc-plus">+</span>':''))+'</td>';
+          }).join('') + '</tr>';
+    }).join('');
+    var table = '<div class="sc-wrap"><table class="sc-tbl">'+'<thead>'+thead+'</thead><tbody>'+tbody+'</tbody></table></div>';
+    // טלפון: יום אחד
+    var di = sched.day;
+    var chips = '<div class="sc-days">' + data.days.map(function(d, i){
+      return '<button class="sc-day'+(i===di?' on':'')+(i===todayCol?' today':'')+'" data-d="'+i+'">'+esc(d)+'</button>'; }).join('') + '</div>';
+    var list = data.periods.map(function(p, pi){
+      var c = data.cells[pi][di];
+      var now = (di===todayCol && pi===nowIdx);
+      return '<div class="sc-item'+(c?'':' empty')+(now?' now':'')+(edit?' sc-ed':'')+'" data-p="'+pi+'" data-d="'+di+'">'
+        + '<div class="sc-when'+(edit?' sc-ed-p':'')+'" data-p="'+pi+'"><b>'+esc(p.n)+'</b><span>'+esc(p.time||'')+'</span>'+(now?'<em>עכשיו</em>':'')+'</div>'
+        + '<div class="sc-what">'+(schedCellHtml_(c) || '<span class="muted">'+(edit?'+ הוספת שיעור':'אין שיעור')+'</span>')+'</div></div>';
+    }).join('');
+    var editBar = edit
+      ? '<div class="sc-editbar"><span class="muted">לחיצה על תא עורכת אותו. לחיצה על מספר השיעור עורכת את השעות.</span>'
+        + '<button class="btn ghost sm" id="scAddP">הוספת שיעור בסוף</button>'
+        + '<button class="btn ghost sm" id="scFri">'+(data.days.indexOf('שישי')>=0?'הסרת יום שישי':'הוספת יום שישי')+'</button></div>'
+      : '';
+    body = editBar + '<div class="panel sc-desk">'+table+'</div>'
+      + '<div class="sc-mob">'+chips+'<div class="panel sc-list">'+list+'</div></div>';
+  }
+  el('view').innerHTML = '<div class="fade">' + tools + tabs + head + body + '</div>';
+
+  el('scBack').addEventListener('click', function(){ sched.edit = false; App.screen = null; route(); });
+  document.querySelectorAll('.sc-tab').forEach(function(t){ t.addEventListener('click', function(){ sched.edit = false; openSched(t.getAttribute('data-c')); }); });
+  if(el('scEdit')) el('scEdit').addEventListener('click', function(){ sched.edit = !sched.edit; drawSched(); });
+  ['scUpload','scUpload2'].forEach(function(id){ if(el(id)) el(id).addEventListener('click', function(){ el('scFile').click(); }); });
+  el('scFile').addEventListener('change', function(){ var f = this.files && this.files[0]; this.value = ''; if(f) schedImportPdf_(f); });
+  if(el('scBuild')) el('scBuild').addEventListener('click', function(){
+    var data = { days: SCHED_DAYS.slice(0,5), periods: SCHED_STD_TIMES.slice(0,10).map(function(t, i){ return { n:String(i), time:t }; }), cells:[] };
+    data.cells = data.periods.map(function(){ return data.days.map(function(){ return null; }); });
+    schedSave_(data, 'נבנה ידנית', function(){ sched.edit = true; });
+  });
+  document.querySelectorAll('.sc-day').forEach(function(b){ b.addEventListener('click', function(){ sched.day = +b.getAttribute('data-d'); drawSched(); }); });
+  if(edit){
+    document.querySelectorAll('td.sc-ed, .sc-item.sc-ed').forEach(function(c){
+      c.addEventListener('click', function(e){ if(e.target.closest('.sc-ed-p')) return; schedEditCell_(+c.getAttribute('data-p'), +c.getAttribute('data-d')); });
+    });
+    document.querySelectorAll('.sc-ed-p').forEach(function(h){
+      h.addEventListener('click', function(e){ e.stopPropagation(); schedEditPeriod_(+h.getAttribute('data-p')); });
+    });
+    el('scAddP').addEventListener('click', function(){
+      var d = JSON.parse(JSON.stringify(sched.res.data)), n = d.periods.length;
+      var last = d.periods[n-1], nn = last && /^\d+$/.test(last.n) ? String(+last.n + 1) : String(n);
+      d.periods.push({ n:nn, time: SCHED_STD_TIMES[+nn] || '' });
+      d.cells.push(d.days.map(function(){ return null; }));
+      schedSave_(d);
+    });
+    el('scFri').addEventListener('click', function(){
+      var d = JSON.parse(JSON.stringify(sched.res.data)), fi = d.days.indexOf('שישי');
+      if(fi >= 0){
+        if(d.cells.some(function(r){ return r[fi]; }) && !confirm('ביום שישי יש שיעורים. להסיר אותו?')) return;
+        d.days.splice(fi, 1); d.cells.forEach(function(r){ r.splice(fi, 1); });
+      } else { d.days.push('שישי'); d.cells.forEach(function(r){ r.push(null); }); }
+      if(sched.day >= d.days.length) sched.day = 0;
+      schedSave_(d);
+    });
+  }
+}
+
+function schedSave_(data, source, after){
+  var prev = sched.res.data;
+  sched.res.data = data; drawSched();
+  callServer('schedSave', App.token, sched.res.cls, data, source || '').then(function(){
+    sched.res.updatedAt = (function(){ var d=new Date(), p=function(n){return (n<10?'0':'')+n;}; return d.getFullYear()+'/'+p(d.getMonth()+1)+'/'+p(d.getDate()); })();
+    sched.res.updatedBy = (App.profile && App.profile.name) || sched.res.updatedBy;
+    sched.res.classes.forEach(function(c){ if(c.cls === sched.res.cls) c.has = true; });
+    if(after) after();
+    drawSched(); toast('המערכת נשמרה');
+  }).catch(function(e){ sched.res.data = prev; drawSched(); toast(e.message, true); });
+}
+
+function schedEditCell_(pi, di){
+  var d = sched.res.data, c = d.cells[pi][di] || { s:'', t:'', g:'', k:'הוראה' };
+  var kinds = SCHED_KINDS.map(function(k){ return '<option'+(k===(c.k||'הוראה')?' selected':'')+'>'+esc(k)+'</option>'; }).join('');
+  el('modalHost').innerHTML = '<div class="modal-bg" id="sceBg"><div class="modal"><div class="m-body">'
+    + '<h3>'+esc(d.days[di])+', שיעור '+esc(d.periods[pi].n)+' <small class="muted" style="font-weight:400;font-size:14px">'+esc(d.periods[pi].time||'')+'</small></h3>'
+    + '<label>מקצוע</label><input id="sceS" value="'+esc(c.s)+'" placeholder="לדוגמה: מתמטיקה">'
+    + '<label style="margin-top:10px">מורה</label><input id="sceT" value="'+esc(c.t)+'">'
+    + '<label style="margin-top:10px">קבוצה או חדר</label><input id="sceG" value="'+esc(c.g)+'">'
+    + '<label style="margin-top:10px">סוג</label><select id="sceK">'+kinds+'</select>'
+    + '<div class="m-actions"><button class="btn gold" id="sceOk">שמירה</button>'
+    + (d.cells[pi][di] ? '<button class="btn ghost" id="sceClr">ריקון התא</button>' : '')
+    + '<button class="btn ghost" id="sceNo">ביטול</button></div></div></div></div>';
+  el('sceNo').addEventListener('click', closeModal);
+  el('sceBg').addEventListener('click', function(e){ if(e.target === el('sceBg')) closeModal(); });
+  setTimeout(function(){ if(el('sceS')) el('sceS').focus(); }, 60);
+  function put(cell){
+    var nd = JSON.parse(JSON.stringify(d)); nd.cells[pi][di] = cell; closeModal(); schedSave_(nd);
+  }
+  el('sceOk').addEventListener('click', function(){
+    var s = el('sceS').value.trim(), t = el('sceT').value.trim(), g = el('sceG').value.trim();
+    put((s || t || g) ? { s:s, t:t, g:g, k:el('sceK').value } : null);
+  });
+  if(el('sceClr')) el('sceClr').addEventListener('click', function(){ put(null); });
+}
+
+function schedEditPeriod_(pi){
+  var d = sched.res.data, p = d.periods[pi];
+  el('modalHost').innerHTML = '<div class="modal-bg" id="scpBg"><div class="modal"><div class="m-body">'
+    + '<h3>שיעור '+esc(p.n)+'</h3>'
+    + '<label>מספר השיעור</label><input id="scpN" value="'+esc(p.n)+'">'
+    + '<label style="margin-top:10px">שעות</label><input id="scpT" value="'+esc(p.time||'')+'" placeholder="לדוגמה: 8:25-9:10" dir="ltr" style="text-align:right">'
+    + '<div class="m-actions"><button class="btn gold" id="scpOk">שמירה</button>'
+    + (d.periods.length > 1 ? '<button class="btn ghost" id="scpDel">מחיקת השורה</button>' : '')
+    + '<button class="btn ghost" id="scpNo">ביטול</button></div></div></div></div>';
+  el('scpNo').addEventListener('click', closeModal);
+  el('scpBg').addEventListener('click', function(e){ if(e.target === el('scpBg')) closeModal(); });
+  el('scpOk').addEventListener('click', function(){
+    var t = el('scpT').value.replace(/\s+/g,'');
+    if(t && !/^\d{1,2}:\d{2}-\d{1,2}:\d{2}$/.test(t)){ toast('יש לכתוב שעות בצורה 8:25-9:10', true); return; }
+    var nd = JSON.parse(JSON.stringify(d)); nd.periods[pi] = { n: el('scpN').value.trim() || p.n, time: t };
+    closeModal(); schedSave_(nd);
+  });
+  if(el('scpDel')) el('scpDel').addEventListener('click', function(){
+    if(d.cells[pi].some(function(c){ return c; }) && !confirm('בשורה הזו יש שיעורים. למחוק אותה?')) return;
+    var nd = JSON.parse(JSON.stringify(d)); nd.periods.splice(pi, 1); nd.cells.splice(pi, 1);
+    closeModal(); schedSave_(nd);
+  });
+}
+
+/* ===== העלאת PDF ===== */
+var _pdfjsP = null;
+function schedLoadPdfJs_(){
+  if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  if(_pdfjsP) return _pdfjsP;
+  _pdfjsP = new Promise(function(res, rej){
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload = function(){
+      try { window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; } catch(e){}
+      res(window.pdfjsLib);
+    };
+    s.onerror = function(){ _pdfjsP = null; rej(new Error('לא ניתן לטעון את קורא ה PDF. יש לבדוק חיבור לאינטרנט')); };
+    document.head.appendChild(s);
+  });
+  return _pdfjsP;
+}
+function schedImportPdf_(file){
+  el('modalHost').innerHTML = '<div class="modal-bg"><div class="modal"><div class="m-body center">'+spinner()+'<div class="muted">קורא את הקובץ</div></div></div></div>';
+  var found = [];
+  file.arrayBuffer().then(function(buf){
+    return schedLoadPdfJs_().then(function(lib){ return lib.getDocument({ data:new Uint8Array(buf) }).promise; });
+  }).then(function(doc){
+    var chain = Promise.resolve();
+    for(var i = 1; i <= Math.min(doc.numPages, 80); i++) (function(n){
+      chain = chain.then(function(){ return doc.getPage(n); }).then(function(pg){ return pg.getTextContent(); }).then(function(tc){
+        var items = tc.items.map(function(it){ return { str:it.str, x:it.transform[4], y:it.transform[5], w:it.width }; });
+        try { var r = schedParseItems(items); r.page = n; found.push(r); } catch(e){}
+      });
+    })(i);
+    return chain;
+  }).then(function(){
+    if(!found.length) throw new Error('לא נמצאה מערכת שעות בקובץ. יש להעלות את קובץ ה PDF של מערכת השעות מ Smart School');
+    schedImportPreview_(found);
+  }).catch(function(e){ closeModal(); toast(e.message || 'קריאת הקובץ נכשלה', true); });
+}
+function schedImportPreview_(found){
+  var mine = sched.res.classes.map(function(c){ return c.cls; });
+  var opts = function(sel){ return '<option value="">לא לייבא</option>' + mine.map(function(c){ return '<option'+(c===sel?' selected':'')+'>'+esc(c)+'</option>'; }).join(''); };
+  var rows = found.map(function(r, i){
+    var def = mine.indexOf(r.cls) >= 0 ? r.cls : (found.length === 1 ? sched.res.cls : '');
+    var lessons = 0; r.data.cells.forEach(function(row){ row.forEach(function(c){ if(c) lessons++; }); });
+    return '<div class="mg-row"><div class="mg-main"><div class="mg-name">'+(r.cls ? 'כיתה '+esc(r.cls) : 'עמוד '+r.page)+'</div>'
+      + '<div class="mg-sub">'+r.data.days.length+' ימים, '+r.data.periods.length+' שיעורים ביום, '+lessons+' שיעורים בשבוע'
+      + (mine.indexOf(r.cls) < 0 && r.cls ? ' | כיתה שאינה באחריותך' : '')+'</div></div>'
+      + '<div class="mg-acts"><select class="sci-to" data-i="'+i+'" style="width:auto">'+opts(def)+'</select></div></div>';
+  }).join('');
+  el('modalHost').innerHTML = '<div class="modal-bg" id="sciBg"><div class="modal" style="max-width:600px;max-height:90vh;overflow:auto"><div class="m-body">'
+    + '<h3>העלאת מערכת שעות</h3>'
+    + '<p class="muted" style="margin-top:-4px">נמצאו בקובץ '+found.length+' מערכות. בחרו לאיזו כיתה לשמור כל אחת. המערכת הקיימת של הכיתה תוחלף.</p>'
+    + rows
+    + '<div class="m-actions"><button class="btn gold" id="sciOk">שמירה</button><button class="btn ghost" id="sciNo">ביטול</button></div>'
+    + '</div></div></div>';
+  el('sciNo').addEventListener('click', closeModal);
+  el('sciOk').addEventListener('click', function(){
+    var jobs = Array.prototype.slice.call(document.querySelectorAll('.sci-to')).map(function(s){ return { cls:s.value, r:found[+s.getAttribute('data-i')] }; })
+      .filter(function(j){ return j.cls; });
+    if(!jobs.length){ toast('לא נבחרה כיתה', true); return; }
+    var b = el('sciOk'); b.disabled = true; b.textContent = 'שומר';
+    var done = 0, chain = Promise.resolve();
+    jobs.forEach(function(j){ chain = chain.then(function(){ return callServer('schedSave', App.token, j.cls, j.r.data, 'הועלה מ PDF').then(function(){ done++; }); }); });
+    chain.then(function(){
+      closeModal(); toast(done === 1 ? 'המערכת של כיתה '+jobs[0].cls+' עודכנה' : 'עודכנו '+done+' מערכות');
+      sched.edit = false; openSched(jobs[0].cls);
+    }).catch(function(e){ b.disabled = false; b.textContent = 'שמירה'; toast(e.message, true); });
+  });
+}
+
+/* מפענח מערכת שעות מטקסט של PDF: מאתר את כותרות הימים ואת עמודת השעות, ומשבץ כל שורה בתא שלה */
+function schedParseItems(items){
+  items = items.map(function(i){ return { s:String(i.str).replace(/\s+/g,' ').trim(), x:i.x, y:i.y, w:i.w, cx:i.x + i.w/2 }; })
+               .filter(function(i){ return i.s; });
+  var heads = [];
+  SCHED_DAYS.forEach(function(d){
+    var h = items.filter(function(i){ return i.s === d; }).sort(function(a,b){ return b.y - a.y; })[0];
+    if(h) heads.push({ day:d, cx:h.cx, y:h.y });
+  });
+  if(heads.length < 5) throw new Error('no days');
+  var headY = Math.max.apply(null, heads.map(function(h){ return h.y; }));
+  heads.sort(function(a,b){ return a.cx - b.cx; });
+  var gap = (heads[heads.length-1].cx - heads[0].cx) / (heads.length - 1);
+  heads.forEach(function(h, i){
+    h.lo = i ? (heads[i-1].cx + h.cx)/2 : h.cx - gap/2;
+    h.hi = i < heads.length-1 ? (h.cx + heads[i+1].cx)/2 : h.cx + gap/2;
+  });
+  var rightEdge = Math.max.apply(null, heads.map(function(h){ return h.hi; }));
+  var below = items.filter(function(i){ return i.y < headY - 3; });
+  var label = below.filter(function(i){ return i.cx > rightEdge; });
+  var nums = label.filter(function(i){ return /^\d{1,2}$/.test(i.s); }).sort(function(a,b){ return b.y - a.y; });
+  var times = label.filter(function(i){ return /^\d{1,2}:\d{2}\s*-\s*\d{1,2}:\d{2}$/.test(i.s); });
+  if(!nums.length) throw new Error('no periods');
+  var rows = nums.map(function(n){
+    var t = times.filter(function(x){ return x.y < n.y + 2 && x.y > n.y - 20; }).sort(function(a,b){ return b.y - a.y; })[0];
+    return { n:n.s, time: t ? t.s.replace(/\s+/g,'') : '', cy: t ? (n.y + t.y)/2 : n.y };
+  });
+  var step = rows.length > 1 ? (rows[0].cy - rows[rows.length-1].cy) / (rows.length - 1) : 50;
+  rows.forEach(function(r, i){
+    r.top = i ? (rows[i-1].cy + r.cy)/2 : Math.min(headY - 3, r.cy + step/2);
+    r.bot = i < rows.length-1 ? (r.cy + rows[i+1].cy)/2 : r.cy - step/2;
+  });
+  var cells = rows.map(function(){ return SCHED_DAYS.map(function(){ return null; }); });
+  below.filter(function(i){ return i.cx <= rightEdge; }).forEach(function(i){
+    var h = heads.filter(function(h){ return i.cx >= h.lo && i.cx < h.hi; })[0];
+    var ri = -1; rows.forEach(function(r, k){ if(i.y <= r.top && i.y > r.bot) ri = k; });
+    if(!h || ri < 0) return;
+    var di = SCHED_DAYS.indexOf(h.day);
+    (cells[ri][di] = cells[ri][di] || []).push(i);
+  });
+  cells = cells.map(function(row){ return row.map(function(list){
+    if(!list) return null;
+    list.sort(function(a,b){ return (b.y - a.y) || (b.x - a.x); });
+    var lines = [];
+    list.forEach(function(i){
+      var last = lines[lines.length-1];
+      if(last && Math.abs(last.y - i.y) < 3) last.t += ' ' + i.s; else lines.push({ y:i.y, t:i.s });
+    });
+    lines = lines.map(function(l){ return l.t; }).filter(function(x){ return x; });
+    if(!lines.length) return null;
+    var k = (lines.length > 1 && SCHED_KINDS.indexOf(lines[lines.length-1]) >= 0) ? lines.pop() : '';
+    return { s: lines[0] || '', t: lines[1] || '', g: lines.slice(2).join(' '), k: k };
+  }); });
+  var title = items.filter(function(i){ return /מערכת שעות/.test(i.s); })[0];
+  var cls = title ? title.s.replace(/.*כיתה/, '').replace(/["'׳״`\s]/g, '') : '';
+  var data = { days: SCHED_DAYS.slice(), periods: rows.map(function(r){ return { n:r.n, time:r.time }; }), cells: cells };
+  var last = -1;
+  data.cells.forEach(function(row, i){ if(row.some(function(c){ return c; })) last = i; });
+  data.periods = data.periods.slice(0, last + 1); data.cells = data.cells.slice(0, last + 1);
+  var fri = data.days.indexOf('שישי');
+  if(fri >= 0 && !data.cells.some(function(r){ return r[fri]; })){
+    data.days.splice(fri, 1); data.cells.forEach(function(r){ r.splice(fri, 1); });
+  }
+  if(!data.periods.length) throw new Error('empty');
+  return { cls: cls, data: data };
+}
+
+/* ===== כרטיס "היום במערכת" במסך השוחר ===== */
+function schedStudentCard_(){
+  if(!App.profile || App.profile.kind !== 'student') return;
+  var host = el('view') && el('view').querySelector('.fade'); if(!host) return;
+  function paint(r){
+    var old = el('scCard'); if(old) old.remove();
+    if(!r || !r.data) return;
+    var data = r.data, di = data.days.indexOf(schedTodayName_()), nowIdx = di >= 0 ? schedNowIdx_(data) : -1;
+    var items = di < 0 ? [] : data.periods.map(function(p, pi){ return { p:p, c:data.cells[pi][di], now: pi===nowIdx }; }).filter(function(x){ return x.c; });
+    var list = items.length
+      ? items.map(function(x){ return '<div class="scc-row'+(x.now?' now':'')+'"><span class="scc-n">'+esc(x.p.n)+'</span><span class="scc-s">'+esc(x.c.s)+'</span><span class="scc-time">'+esc(x.p.time||'')+'</span></div>'; }).join('')
+      : '<div class="muted" style="padding:6px 0">אין שיעורים היום</div>';
+    var card = document.createElement('div');
+    card.id = 'scCard'; card.className = 'panel scc';
+    card.innerHTML = '<div class="head"><div><h2>המערכת שלי היום</h2></div><button class="btn ghost sm" id="sccAll">לכל השבוע</button></div><div class="body">'+list+'</div>';
+    host.appendChild(card);
+    el('sccAll').addEventListener('click', function(){ openSched(''); });
+  }
+  if(sched.my && Date.now() - sched.myAt < 10*60*1000) return paint(sched.my);
+  callServer('schedGet', App.token, '').then(function(r){ sched.my = r; sched.myAt = Date.now(); paint(r); }).catch(function(){});
+}
+
+/* כרטיס המערכת נוסף בסוף מסך השוחר בכל ציור */
+var _drawStudentBase = drawStudent;
+drawStudent = function(){ _drawStudentBase.apply(this, arguments); try { schedStudentCard_(); } catch(e){} };
+
 /* ============ יציאות וסיורים ============
    רובריקה נפרדת מדוח הבוקר. יציאה לכמה כיתות, וכל כיתה מנוהלת בנפרד.
    ספירה ראשונה קובעת מי יוצא. אחרי סגירת הרשימה כל ספירה היא על הרשימה בלבד. */
@@ -2447,6 +2848,7 @@ function paintCommander(d){
     var bar = '<div class="toolbar">'
         + (p.canGenerate ? '<button class="btn gold" id="genBtn">הפקת דוח להיום</button>' : '')
         + '<button class="btn ghost" id="tripsBtn">יציאות וסיורים</button>'
+        + ((p.role==='מק"ס'||p.role==='ראש צוות'||p.role==='מפקד שלוחה') ? '<button class="btn ghost" id="schedBtn">מערכת שעות</button>' : '')
         + (p.canSeeAll ? '<button class="btn ghost" id="dashBtn">מבט שלוחה</button>' : '')
         + (canFuture ? '<button class="btn ghost" id="futureBtn">'+(d.futureOpen?'סגירת דיווח עתידי':'פתיחת דיווח עתידי')+'</button>' : '')
         + (oldBar ? '<button class="btn ghost" id="bulkBtn">דיווח גורף</button>' : '')
@@ -2475,6 +2877,7 @@ function paintCommander(d){
 function bindCmdTop(){
   if(el('genBtn')) el('genBtn').addEventListener('click', openGenerate);
   if(el('tripsBtn')) el('tripsBtn').addEventListener('click', openTrips);
+  if(el('schedBtn')) el('schedBtn').addEventListener('click', function(){ sched.edit = false; openSched((cmdState.data && cmdState.data.classes[cmdState.active] && cmdState.data.classes[cmdState.active].cls) || ''); });
   if(el('dashBtn')) el('dashBtn').addEventListener('click', renderDashboard);
   if(el('futureBtn')) el('futureBtn').addEventListener('click', function(){
     toggleFuture(!!(cmdState.data && cmdState.data.futureOpen));
