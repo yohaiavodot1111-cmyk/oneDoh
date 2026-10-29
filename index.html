@@ -1097,6 +1097,8 @@ var RPC_MAP = {
   tripMember:          ['trip_member',           ['p_token','p_trip','p_class','p_student','p_in']],
   schedGet:            ['schedule_get',          ['p_token','p_class']],
   schedSave:           ['schedule_save',         ['p_token','p_class','p_data','p_source']],
+  classRoster:         ['class_roster',          ['p_token','p_classes']],
+  classSetHomeroom:    ['class_set_homeroom',    ['p_token','p_class','p_name']],
   studentDashboard:    ['student_dashboard',     ['p_token','p_student','p_date']],
   monthLog:            ['month_log',             ['p_token','p_student','p_year','p_month']],
   branchOverview:      ['branch_overview',       ['p_token','p_date']],
@@ -2287,6 +2289,135 @@ function schedStudentCard_(){
 var _drawStudentBase = drawStudent;
 drawStudent = function(){ _drawStudentBase.apply(this, arguments); try { schedStudentCard_(); } catch(e){} };
 
+/* ============ רשימה שמית בפורמט Smart School ============
+   משחזר את קובץ "רשימת תלמידים" של בית הספר: אותם רוחבי עמודות, גובהי שורות, גופנים, צבעים, גבולות והגדרות הדפסה.
+   ההבדל היחיד: בלי עמודת מין. */
+function hebSchoolYear_(d){
+  var y = d.getFullYear() + (d.getMonth() >= 8 ? 1 : 0) + 3760, n = y % 1000, out = '';
+  [[400,'ת'],[300,'ש'],[200,'ר'],[100,'ק']].forEach(function(h){ while(n >= h[0]){ out += h[1]; n -= h[0]; } });
+  if(n === 15) out += 'טו'; else if(n === 16) out += 'טז';
+  else {
+    var T = ['','י','כ','ל','מ','נ','ס','ע','פ','צ'], U = ['','א','ב','ג','ד','ה','ו','ז','ח','ט'];
+    out += T[Math.floor(n/10)] + U[n%10];
+  }
+  return out.length > 1 ? out.slice(0,-1) + '"' + out.slice(-1) : out + "'";
+}
+function clsHe_(cls){
+  var m = String(cls).match(/^([א-ת]+)(\d*)$/); if(!m) return cls;
+  var L = m[1], base = L.length === 1 ? L + "'" : L.slice(0,-1) + '"' + L.slice(-1);
+  return base + (m[2] ? ' ' + m[2] : '');
+}
+function rosterSheet_(wb, sheetName, c, generated){
+  var ws = wb.addWorksheet(sheetName, {
+    views:[{ showGridLines:false }],
+    pageSetup:{ paperSize:9, orientation:'portrait', horizontalDpi:300, verticalDpi:300,
+      margins:{ left:0.078740157480315, right:0.078740157480315, top:0.078740157480315, bottom:0.648145669291339, header:0.078740157480315, footer:0.078740157480315 } },
+    headerFooter:{ alignWithMargins:false,
+      oddFooter:'&L&"Arial,Regular"&8 עמוד &P מתוך &N &C&"Arial,Regular"&8 מכיל מידע מוגן על פי חוק הגנת הפרטיות, המוסרו שלא כדין עובר עבירה &R&"Arial,Regular"&8 דוח 60 הופק ב: ' + generated + ' ' }
+  });
+  ws.properties.defaultRowHeight = 15;
+  // A עד S. C עד H עמודות ריקות לסימונים, I כיתה, J ת.ז, K שם פרטי, L שם משפחה, M מספור
+  [0.23046875,0.19140625,9.19140625,8.6640625,8.34375,9.68359375,10.640625,10.87109375,4.28125,8.8828125,8.5625,8.18359375,4.04296875,0.0234375,1.75390625,0.04296875,7.640625,0.0234375,0.7421875]
+    .forEach(function(w, i){ ws.getColumn(i+1).width = w; });
+  var H = {1:2.8, 2:13.75, 3:1.0, 4:15.25, 5:4.0, 6:14.15, 7:1.95, 8:5.35, 9:14.15};
+  Object.keys(H).forEach(function(r){ ws.getRow(+r).height = H[r]; });
+
+  var BLACK = { argb:'FF000000' }, thin = { style:'thin' };
+  var ALL = { top:thin, left:thin, bottom:thin, right:thin };
+  var FILL = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFE6E6FA' } };
+  function put(addr, v, font, align, border, fill){
+    var x = ws.getCell(addr); x.value = v;
+    x.font = Object.assign({ name:'Arial', bold:false, italic:false, underline:false, strike:false, color:BLACK }, font);
+    x.alignment = Object.assign({ vertical:'top', wrapText:true }, align);
+    if(border) x.border = border; if(fill) x.fill = fill;
+  }
+  ws.mergeCells('B2:Q2'); put('B2', 'אורט אפרידר רונסון, אשקלון שנת הלימודים ' + hebSchoolYear_(new Date()), { size:10 }, { horizontal:'center', readingOrder:'ltr' });
+  ws.mergeCells('C4:Q4'); put('C4', 'רשימת תלמידים ל: ' + clsHe_(c.cls), { size:12, bold:true, color:{ argb:'FF0000FF' } }, { horizontal:'center', readingOrder:'rtl' });
+  ws.mergeCells('C6:O6'); put('C6', 'מחנכ/ת: ' + (c.homeroom || '') + ', ', { size:12, bold:true, color:{ argb:'FF0000FF' } }, { horizontal:'center', readingOrder:'rtl' });
+
+  var COLS = ['C','D','E','F','G','H','I','J','K','L','M'];
+  var HEAD = { I:'כיתה', J:'ת.ז', K:'שם פרטי', L:' שם משפחה' };
+  COLS.forEach(function(col){ put(col+'9', HEAD[col] || null, { size:9, bold:true }, { horizontal:'center', readingOrder:'ltr' }, ALL, FILL); });
+
+  var r = 10;
+  (c.students || []).forEach(function(s, i){
+    ws.getRow(r).height = (r % 5 === 0) ? 16.8 : 16.75;
+    ['C','D','E','F','G','H'].forEach(function(col){ put(col+r, null, { size:8 }, { horizontal:'right', readingOrder:'rtl' }, ALL); });
+    var tz = String(s.tz || '').trim();
+    put('I'+r, clsHe_(c.cls), { size:8 }, { horizontal:'center', readingOrder:'ltr' }, ALL);
+    put('J'+r, /^[1-9]\d*$/.test(tz) ? Number(tz) : (tz || null), { size:8 }, { horizontal:'center', readingOrder:'ltr' }, ALL);
+    put('K'+r, s.first || null, { size:8 }, { horizontal:'right', readingOrder:'rtl' }, ALL);
+    put('L'+r, s.last || null, { size:8 }, { horizontal:'right', readingOrder:'rtl' }, ALL);
+    put('M'+r, i + 1, { size:8 }, { horizontal:'general', readingOrder:'ltr' }, ALL);
+    r++;
+  });
+  ws.getRow(r).height = 14.15;
+  var B3 = { left:thin, right:thin, bottom:thin };
+  COLS.forEach(function(col){ put(col+r, null, { size:8 }, { horizontal:'center', readingOrder:'ltr' }, B3, FILL); });
+  ws.mergeCells('C'+r+':M'+r);
+  ws.getCell('C'+r).value = 'מספר התלמידים: ' + (c.students || []).length;
+  ws.getRow(r+1).height = 0.05;
+  return ws;
+}
+/* כמו בקובץ המקור: משורת הכותרת של הטבלה והלאה גובה השורות אוטומטי (customHeight=0) */
+function rosterAutoRows_(buf){
+  try {
+    var CFB = XLSX.CFB, cfb = CFB.read(new Uint8Array(buf), { type:'array' });
+    cfb.FullPaths.forEach(function(path, i){
+      if(!/xl\/worksheets\/sheet\d+\.xml$/.test(path)) return;
+      var f = cfb.FileIndex[i];
+      var xml = new TextDecoder('utf-8').decode(f.content);
+      xml = xml.replace(/<sheetFormatPr[^>]*\/>/, '');   // כמו במקור: בלי גובה ברירת מחדל
+      xml = xml.replace(/<row r="(\d+)"([^>]*?)customHeight="1"/g, function(m, r, rest){ return (+r >= 9) ? '<row r="'+r+'"'+rest+'customHeight="0"' : m; });
+      f.content = new TextEncoder().encode(xml); f.size = f.content.length;
+    });
+    var out = CFB.write(cfb, { fileType:'zip', type:'array', compression:true });
+    return out instanceof Uint8Array ? out : new Uint8Array(out);
+  } catch(e){ return buf; }
+}
+function downloadRoster_(classes, btn){
+  if(btn){ btn.disabled = true; btn._t = btn.textContent; btn.textContent = 'מכין'; }
+  function done(){ if(btn){ btn.disabled = false; btn.textContent = btn._t; } }
+  return callServer('classRoster', App.token, classes).then(function(d){
+    var wb = new ExcelJS.Workbook();
+    var list = d.classes || [];
+    list.forEach(function(c){ rosterSheet_(wb, list.length === 1 ? 'ClassPupilsList' : c.cls, c, d.generated); });
+    return wb.xlsx.writeBuffer().then(function(buf){
+      var blob = new Blob([rosterAutoRows_(buf)], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      var url = URL.createObjectURL(blob), a = document.createElement('a');
+      a.href = url; a.download = (list.length === 1 ? 'רשימה שמית ' + list[0].cls : 'רשימות שמיות כל הכיתות') + '.xlsx';
+      document.body.appendChild(a); a.click();
+      setTimeout(function(){ a.remove(); URL.revokeObjectURL(url); }, 1500);
+      done();
+    });
+  }).catch(function(e){ done(); toast(e.message || 'הפקת הרשימה נכשלה', true); });
+}
+function openRoster_(cls){
+  el('modalHost').innerHTML = '<div class="modal-bg"><div class="modal"><div class="m-body center">'+spinner()+'</div></div></div>';
+  callServer('classRoster', App.token, [cls]).then(function(d){
+    var c = (d.classes || [])[0] || { cls:cls, homeroom:'', students:[] };
+    var mgr = d.canEditHomeroom;
+    el('modalHost').innerHTML = '<div class="modal-bg" id="rsBg"><div class="modal"><div class="m-body">'
+      + '<h3>רשימה שמית כיתה '+esc(cls)+'</h3>'
+      + '<p class="muted" style="margin-top:-4px">קובץ Excel בפורמט של רשימת התלמידים של בית הספר: '+c.students.length+' שוחרים, לפי שם משפחה, עם תעודות זהות.</p>'
+      + '<label>מחנכ/ת (שם משפחה ואז שם פרטי)</label>'
+      + (mgr ? '<input id="rsHr" value="'+esc(c.homeroom)+'">' : '<div style="font-weight:700;padding:6px 0">'+esc(c.homeroom || 'לא הוגדר')+'</div>')
+      + '<div class="m-actions" style="flex-wrap:wrap"><button class="btn gold" id="rsGo">הורדת הרשימה</button>'
+      + (mgr ? '<button class="btn ghost" id="rsAll">כל הכיתות בקובץ אחד</button>' : '')
+      + '<button class="btn ghost" id="rsNo">סגירה</button></div></div></div></div>';
+    el('rsNo').addEventListener('click', closeModal);
+    el('rsBg').addEventListener('click', function(e){ if(e.target === el('rsBg')) closeModal(); });
+    function saveHr(){
+      if(!mgr) return Promise.resolve();
+      var v = el('rsHr').value.trim();
+      if(v === (c.homeroom || '')) return Promise.resolve();
+      return callServer('classSetHomeroom', App.token, cls, v).then(function(){ c.homeroom = v; });
+    }
+    el('rsGo').addEventListener('click', function(){ var b = this; saveHr().then(function(){ return downloadRoster_([cls], b); }).catch(function(e){ toast(e.message, true); }); });
+    if(el('rsAll')) el('rsAll').addEventListener('click', function(){ var b = this; saveHr().then(function(){ return downloadRoster_([], b); }).catch(function(e){ toast(e.message, true); }); });
+  }).catch(function(e){ closeModal(); toast(e.message, true); });
+}
+
 /* ============ יציאות וסיורים ============
    רובריקה נפרדת מדוח הבוקר. יציאה לכמה כיתות, וכל כיתה מנוהלת בנפרד.
    ספירה ראשונה קובעת מי יוצא. אחרי סגירת הרשימה כל ספירה היא על הרשימה בלבד. */
@@ -3072,11 +3203,12 @@ function renderClassPane(){
   el('classPane').innerHTML =
     '<div class="panel"><div class="head">'
     + '<div><h2>כיתה '+esc(c.cls)+'</h2><div class="sub" style="margin-top:6px">'+classSummary(c)+'</div>'
-      + (ok ? '<div class="cls-actions">'
-        + '<button class="btn ghost sm" id="coToggleBtn">'+(c.checkoutEnabled?'סגירת דיווח יציאה':'פתיחת דיווח יציאה')+'</button>'
-        + '<button class="btn ghost sm" id="pushBtn">שליחת הודעה</button>'
-        + '<button class="btn ghost sm" id="msgsBtn">הודעות שנשלחו</button>'
-        + '</div>' : '')
+      + '<div class="cls-actions">'
+        + (ok ? '<button class="btn ghost sm" id="coToggleBtn">'+(c.checkoutEnabled?'סגירת דיווח יציאה':'פתיחת דיווח יציאה')+'</button>'
+          + '<button class="btn ghost sm" id="pushBtn">שליחת הודעה</button>'
+          + '<button class="btn ghost sm" id="msgsBtn">הודעות שנשלחו</button>' : '')
+        + '<button class="btn ghost sm" id="rosterBtn">רשימה שמית</button>'
+        + '</div>'
       + '</div>'
     + cutoffCtl + '</div>'
     + '<div class="body" style="padding:16px 24px;border-bottom:1px solid var(--line-2)">'
@@ -3106,6 +3238,7 @@ function renderClassPane(){
     a.addEventListener('click', function(e){ e.preventDefault(); openDashboard(a.getAttribute('data-id')); });
   });
   if(el('pushBtn')) el('pushBtn').addEventListener('click', function(){ openClassPush(c.cls); });
+  if(el('rosterBtn')) el('rosterBtn').addEventListener('click', function(){ openRoster_(c.cls); });
   if(el('msgsBtn')) el('msgsBtn').addEventListener('click', function(){ openClassMessages(c.cls); });
   if(el('coToggleBtn')) el('coToggleBtn').addEventListener('click', function(){
     var c=cmdState.data.classes[cmdState.active]; var cur=!!c.checkoutEnabled; var next=!cur;
