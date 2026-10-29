@@ -990,6 +990,64 @@
   .st-legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:12px; font-size:13px; align-items:center;}
   .st-legend span{display:inline-flex; align-items:center; gap:6px;}
   @media(max-width:700px){ .st-periods{grid-template-columns:1fr;} .st-chart{gap:6px;} }
+
+  /* ============ השוואת כיתות וגרפים ============ */
+  .st-tip{position:fixed; z-index:100; pointer-events:none; opacity:0; transition:opacity .12s ease; background:#fff; border:1px solid var(--line); border-radius:8px;
+    box-shadow:0 8px 24px rgba(11,41,63,.14); padding:7px 10px; font-size:12.5px; max-width:260px; display:flex; flex-direction:column; gap:2px;}
+  .st-tip b{font-size:15px; color:var(--ink);} .st-tip span{color:var(--muted);}
+  .sh-row{display:flex; align-items:center; gap:10px; margin:7px 0;}
+  .sh-l{flex:0 0 92px; font-weight:600; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .sh-l small{font-weight:500; color:var(--muted); font-size:11px;}
+  .sh-track{position:relative; flex:1 1 auto; height:22px; display:flex; align-items:center;}
+  .sh-bar{display:block; height:18px; border-radius:0 4px 4px 0; min-width:2px; transition:filter .12s ease; outline:none;}
+  [dir="rtl"] .sh-bar, .sh-bar{border-radius:4px 0 0 4px;}
+  .sh-bar:hover, .sh-bar:focus{filter:brightness(1.08); box-shadow:0 0 0 2px rgba(42,120,214,.25);}
+  .sh-v{font-style:normal; font-size:12.5px; font-weight:700; color:var(--ink); margin-inline-start:6px; padding:0 3px; background:#fff; border-radius:3px; position:relative; z-index:2; white-space:nowrap; font-variant-numeric:tabular-nums;}
+  .sx-rank .sh-l{flex-basis:150px;}
+  .sh-ref{position:absolute; top:-3px; bottom:-3px; width:1px; background:#5b6b7b; z-index:1;}
+  .sx-hero{display:flex; justify-content:space-between; align-items:center; gap:20px; flex-wrap:wrap; background:#fff; border:1px solid var(--line);
+    border-radius:14px; padding:22px 24px; margin-bottom:12px; box-shadow:var(--shadow-sm); border-top:4px solid #2a78d6;}
+  .sx-cap{font-size:13px; font-weight:700; color:var(--muted);}
+  .sx-big{font-family:var(--sans); font-weight:800; font-size:52px; line-height:1.05; color:var(--navy); margin:4px 0 6px;}
+  .sx-sub{font-size:14px; color:var(--slate);} .sx-sub b{color:var(--ink);}
+  .sx-podium{display:flex; align-items:flex-end; gap:8px;}
+  .sx-pod{width:88px; text-align:center; background:var(--sky-soft); border-radius:10px 10px 4px 4px; padding:10px 6px; display:flex; flex-direction:column; gap:2px;}
+  .sx-pod.p1{height:126px; background:#dbe9fb; order:2;} .sx-pod.p2{height:104px; order:1;} .sx-pod.p3{height:88px; order:3;}
+  .sx-pod span{font-size:11.5px; color:var(--muted); font-weight:600;} .sx-pod b{font-size:20px; color:var(--navy); margin-top:auto;} .sx-pod em{font-style:normal; font-size:13px; font-weight:700;}
+  .sx-formula{background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px 16px; margin-bottom:16px; font-size:14px;}
+  .sx-formula summary{cursor:pointer; font-weight:700; color:var(--navy);}
+  .sx-formula p{margin:8px 0; line-height:1.7;} .sx-eq{background:var(--sky-soft); border-radius:8px; padding:8px 12px; font-weight:700; color:var(--navy);}
+  .sx-3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:16px;} .sx-3 .panel{margin:0;}
+  .sx-p .sh-l{flex-basis:44px;}
+  .sx-stack{flex:1 1 auto; display:flex; gap:2px; height:24px;}
+  .sx-seg{display:flex; align-items:center; justify-content:center; min-width:2px; outline:none;}
+  .sx-seg:first-child{border-radius:0 4px 4px 0;} .sx-seg:last-child{border-radius:4px 0 0 4px;}
+  .sx-seg:hover, .sx-seg:focus{filter:brightness(1.1);}
+  .sx-seg em{font-style:normal; font-size:11.5px; font-weight:700; white-space:nowrap;}
+  .st-legend i.ln{width:16px; height:2px; border-radius:2px;} .st-legend i.dot{width:10px; height:10px; border-radius:50%;}
+  .sx-sparks{display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:12px;}
+  .sx-spark{border:1px solid var(--line-2); border-radius:10px; padding:10px 12px 6px;}
+  .sx-sp-h{display:flex; justify-content:space-between; font-size:13.5px;} .sx-sp-h span{font-weight:700; font-variant-numeric:tabular-nums;}
+  .sx-svg{width:100%; height:74px; display:block; margin-top:4px; overflow:visible;}
+  .sx-grid{stroke:#e6ebf0; stroke-width:1; vector-effect:non-scaling-stroke;}
+  .sx-avg{fill:none; stroke:#9aa5b1; stroke-width:2; stroke-linejoin:round; stroke-linecap:round; vector-effect:non-scaling-stroke;}
+  .sx-line{fill:none; stroke:#2a78d6; stroke-width:2; stroke-linejoin:round; stroke-linecap:round; vector-effect:non-scaling-stroke;}
+  .sx-dot{fill:#2a78d6; stroke:#fff; stroke-width:2;}
+  .sx-svg rect{outline:none;} .sx-svg rect:hover{fill:rgba(42,120,214,.06);}
+  .sx-heat{display:grid; grid-template-columns:70px repeat(5, 1fr); gap:2px;}
+  .sx-hh{font-size:12.5px; color:var(--muted); text-align:center; padding:4px 0; font-weight:600;}
+  .sx-hl{font-weight:600; font-size:13.5px; display:flex; align-items:center;}
+  .sx-hc{height:34px; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:12.5px; font-weight:700; outline:none; font-variant-numeric:tabular-nums;}
+  .sx-hc.empty{background:#f3f5f7; color:var(--muted); font-weight:500;}
+  .sx-hc:hover, .sx-hc:focus{box-shadow:0 0 0 2px #0b0b0b inset;}
+  .sx-scale{display:flex; align-items:center; gap:8px; margin-top:10px; font-size:12px; color:var(--muted);} .sx-scale i{flex:0 0 160px; height:8px; border-radius:4px;}
+  .sx-bell{position:relative; flex:1 1 auto; height:22px; background:linear-gradient(#e6ebf0,#e6ebf0) center/100% 1px no-repeat;}
+  .sx-bl{position:absolute; top:10px; height:2px; background:#9aa5b1;}
+  .sx-bd{position:absolute; top:5px; width:12px; height:12px; margin-inline-start:-6px; border-radius:50%; border:2px solid #fff; outline:none;}
+  .sx-bd.a{background:#2F6EA8;} .sx-bd.b{background:#C27A12;}
+  .sx-bdl{flex:0 0 56px; font-size:12.5px; font-weight:700; text-align:left;} .sx-bdl.good{color:var(--present);} .sx-bdl.bad{color:var(--absent);}
+  @media(max-width:900px){ .sx-3{grid-template-columns:1fr;} .sx-big{font-size:44px;} }
+  @media(max-width:480px){ .sx-rank .sh-l{flex-basis:96px; white-space:normal; line-height:1.2;} .sx-heat{grid-template-columns:44px repeat(5,1fr);} .sx-hc{font-size:11px;} .sx-pod{width:72px;} }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -2757,13 +2815,14 @@ function renderStats(){
   App.screen = 'stats';
   var tabs = '<div class="classtabs" style="margin:6px 0 18px">'
     + '<button class="tab'+(st.tab==='sum'?' on':'')+' st-tab" data-t="sum">סיכום תקופה</button>'
+    + '<button class="tab'+(st.tab==='cls'?' on':'')+' st-tab" data-t="cls">השוואת כיתות</button>'
     + '<button class="tab'+(st.tab==='cmp'?' on':'')+' st-tab" data-t="cmp">השוואת תקופות</button></div>';
   el('view').innerHTML = '<div class="fade"><div class="toolbar"><button class="btn ghost" id="stBack">חזרה</button></div>'
     + '<div class="sc-head"><h2>נתונים וסטטיסטיקות</h2><div class="sub">נתונים מהמצב הסופי של כל יום. האחוזים מחושבים מימי הלימוד (א עד ה, בלי ימים נעולים ובלי חופשה שנתית).</div></div>'
     + tabs + '<div id="stBody"></div></div>';
   el('stBack').addEventListener('click', function(){ App.screen = null; route(); });
   document.querySelectorAll('.st-tab').forEach(function(t){ t.addEventListener('click', function(){ st.tab = t.getAttribute('data-t'); renderStats(); }); });
-  if(st.tab === 'sum') stDrawSumControls_(); else stDrawCmpControls_();
+  if(st.tab === 'sum' || st.tab === 'cls') stDrawSumControls_(); else stDrawCmpControls_();
 }
 
 function stFetch_(from, to){
@@ -2790,16 +2849,17 @@ function stDrawSumControls_(){
   document.querySelectorAll('.st-presets .tr-chip').forEach(function(c){ c.addEventListener('click', function(){
     el('stF').value = c.getAttribute('data-f'); el('stT').value = c.getAttribute('data-t'); stRunSum_(); }); });
   el('stGo').addEventListener('click', stRunSum_);
-  if(st.sum && st.sumRange) stDrawSum_(); else stRunSum_();
+  if(st.sum && st.sumRange) stDrawRes_(); else stRunSum_();
 }
 function stRunSum_(){
   var f = el('stF').value, t = el('stT').value;
   if(!f || !t || f > t){ toast('יש לבחור טווח תאריכים תקין', true); return; }
   st.sumRange = { from:f, to:t };
   el('stRes').innerHTML = spinner();
-  stFetch_(f, t).then(function(r){ st.sum = r; stDrawSum_(); })
+  stFetch_(f, t).then(function(r){ st.sum = r; stDrawRes_(); })
     .catch(function(e){ el('stRes').innerHTML = ''; toast(e.message, true); if(!st.pw) openStats(); });
 }
+function stDrawRes_(){ if(st.tab === 'cls') stDrawCls_(); else stDrawSum_(); }
 function stDrawSum_(){
   var r = st.sum, all = stAgg_(r.students);
   var byCls = {}; r.students.forEach(function(x){ (byCls[x.cls] = byCls[x.cls] || []).push(x); });
@@ -2962,7 +3022,197 @@ function stDrawCmp_(){
     + ' | תקופה ב '+esc(shortDate(B.from))+' עד '+esc(shortDate(B.to))+'</div>'
     + '<div class="ad-grid"><div class="panel"><div class="head"><div><h2>מדדים מרכזיים</h2></div></div><div class="body" style="padding-top:0"><table class="ad-tbl st-tbl st-m"><thead><tr><th>מדד</th><th>תקופה א</th><th>תקופה ב</th><th>שינוי</th></tr></thead><tbody>'+mrows+'</tbody></table></div></div>'
     + '<div class="panel"><div class="head"><div><h2>נוכחות לפי יום בשבוע</h2></div></div><div class="body">'+chart+'</div></div></div>'
+    + (q.scope[0] === 'C' ? '' : stCmpClassesBlock_(sa, sb))
     + detail;
+}
+
+/* ============ השוואת כיתות: מדד הצטיינות וגרפים ============
+   מדד הצטיינות (0 עד 100) לכל כיתה:
+     ימי חובה = ימי לימוד של כל השוחרים, בלי חופשה שנתית ובלי היעדרות מוצדקת
+     נקודות עונש = 2 לכל היעדרות ללא אישור + 1 לכל איחור + 1 לכל יום בלי דיווח
+     מדד = 100 פחות נקודות העונש לכל 100 ימי חובה
+   כיתה נכנסת לדירוג רק עם 5 שוחרים לפחות ו 100 ימי חובה לפחות, כדי שכיתה קטנה לא תנצח במקרה. */
+var ST_ACCENT = '#2a78d6', ST_MUTED = '#c3cad3';
+var ST_STAT = [ ['present','נוכח','#2a78d6'], ['late','איחור','#eb6834'], ['just','היעדרות מוצדקת','#1baf7a'], ['unjust','ללא אישור','#eda100'], ['norep','בלי דיווח','#e87ba4'] ];
+var ST_SEQ = ['#cde2fb','#b7d3f6','#9ec5f4','#86b6ef','#6da7ec','#5598e7','#3987e5','#2a78d6','#256abf','#1c5cab','#184f95','#104281','#0d366b'];
+
+function stScore_(a){
+  var D = a.base - a.just;
+  a.D = D;
+  a.pen = 2 * a.unjust + a.late + a.norep;
+  a.score = D > 0 ? Math.max(0, 100 - 100 * a.pen / D) : null;
+  a.eligible = a.students >= 5 && D >= 100;
+  return a;
+}
+function stClassAggs_(students){
+  var by = {}; students.forEach(function(x){ (by[x.cls] = by[x.cls] || []).push(x); });
+  return Object.keys(by).map(function(c){ var a = stScore_(stAgg_(by[c])); a.cls = c; return a; });
+}
+function stF1_(v){ return v == null ? 'אין' : (Math.round(v * 10) / 10).toFixed(1); }
+
+/* tooltip אחד לכל המסך. ערך מודגש קודם, התווית אחריו. טקסט נכנס דרך textContent */
+function stTipInit_(){
+  if(el('stTip')) return;
+  var t = document.createElement('div'); t.id = 'stTip'; t.className = 'st-tip'; t.innerHTML = '<b></b><span></span>'; document.body.appendChild(t);
+  function show(e){
+    var m = e.target.closest && e.target.closest('[data-tv]'); if(!m){ t.style.opacity = 0; return; }
+    t.querySelector('b').textContent = m.getAttribute('data-tv'); t.querySelector('span').textContent = m.getAttribute('data-tl') || '';
+    var x = (e.clientX || (m.getBoundingClientRect().left + 10)), y = (e.clientY || m.getBoundingClientRect().top);
+    t.style.opacity = 1;
+    var w = t.offsetWidth; t.style.left = Math.min(window.innerWidth - w - 8, Math.max(8, x - w/2)) + 'px'; t.style.top = Math.max(8, y - t.offsetHeight - 14) + 'px';
+  }
+  document.addEventListener('pointermove', show);
+  document.addEventListener('focusin', show);
+  document.addEventListener('pointerleave', function(){ t.style.opacity = 0; });
+  document.addEventListener('scroll', function(){ t.style.opacity = 0; }, true);
+}
+function stTipAttr_(v, l){ return ' data-tv="'+esc(v)+'" data-tl="'+esc(l)+'" tabindex="0"'; }
+
+/* פס אופקי אחד (מסומן מהבסיס בימין) */
+function stHBar_(label, v, max, color, valTxt, tipLabel, tag, refPct){
+  var w = max > 0 ? Math.max(0, Math.min(100, v * 100 / max)) : 0;
+  return '<div class="sh-row"><div class="sh-l">'+esc(label)+(tag ? ' <small>'+esc(tag)+'</small>' : '')+'</div>'
+    + '<div class="sh-track">'+(refPct != null ? '<i class="sh-ref" style="inset-inline-start:'+refPct+'%"></i>' : '')
+    + '<span class="sh-bar" style="width:'+w+'%;background:'+color+'"'+stTipAttr_(valTxt, tipLabel)+'></span>'
+    + '<em class="sh-v">'+esc(valTxt)+'</em></div></div>';
+}
+
+function stDrawCls_(){
+  stTipInit_();
+  var r = st.sum, aggs = stClassAggs_(r.students), all = stScore_(stAgg_(r.students));
+  aggs.sort(function(a, b){ return (b.eligible - a.eligible) || ((b.score == null ? -1 : b.score) - (a.score == null ? -1 : a.score)) || stSortCls_(a.cls, b.cls); });
+  var elig = aggs.filter(function(a){ return a.eligible && a.score != null; });
+  var hero = elig.length
+    ? '<div class="sx-hero"><div class="sx-hero-l"><div class="sx-cap">הכיתה המצטיינת בתקופה</div><div class="sx-big">כיתה '+esc(elig[0].cls)+'</div>'
+      + '<div class="sx-sub">מדד הצטיינות <b>'+stF1_(elig[0].score)+'</b> מתוך 100 | נוכחות '+stPct_(elig[0].att)+' | ממוצע השלוחה '+stF1_(all.score)+'</div></div>'
+      + '<div class="sx-podium">' + elig.slice(0,3).map(function(a, i){ return '<div class="sx-pod p'+(i+1)+'"><span>מקום '+(i+1)+'</span><b>'+esc(a.cls)+'</b><em>'+stF1_(a.score)+'</em></div>'; }).join('') + '</div></div>'
+    : '<div class="banner warn">אין בתקופה הזו כיתה עם מספיק נתונים לדירוג (5 שוחרים ו 100 ימי חובה לפחות).</div>';
+  var formula = '<details class="sx-formula"><summary>איך מחושב מדד ההצטיינות</summary><div>'
+    + '<p><b>ימי חובה</b> = כל ימי הלימוד של שוחרי הכיתה בתקופה, בלי חופשה שנתית ובלי היעדרות מוצדקת (מחלה, חופשה משפחתית וכו).</p>'
+    + '<p><b>נקודות עונש</b> = 2 לכל היעדרות ללא אישור, 1 לכל איחור, 1 לכל יום בלי דיווח.</p>'
+    + '<p class="sx-eq">מדד = 100 פחות (נקודות עונש חלקי ימי חובה, כפול 100)</p>'
+    + '<p>כלומר: כיתה בלי אף איחור, היעדרות ללא אישור או יום בלי דיווח מקבלת 100. כל איחור לכל 100 ימי חובה מוריד נקודה, וכל היעדרות ללא אישור מורידה שתיים. היעדרות מוצדקת לא פוגעת במדד. כיתה נכנסת לדירוג רק עם 5 שוחרים ו 100 ימי חובה לפחות.</p></div></details>';
+
+  // דירוג: הדגשת הכיתה המצטיינת, השאר באפור
+  var maxScore = 100;
+  var rank = aggs.map(function(a){
+    var win = elig.length && a.cls === elig[0].cls;
+    return stHBar_('כיתה ' + a.cls, a.score || 0, maxScore, win ? ST_ACCENT : ST_MUTED, a.score == null ? 'אין' : stF1_(a.score),
+      'מדד הצטיינות, כיתה ' + a.cls, a.eligible ? '' : 'מעט נתונים');
+  }).join('');
+
+  // שלושה מדדים מול ממוצע השלוחה
+  function panel(title, key, goodHigh){
+    var vals = aggs.map(function(a){ return a[key] || 0; }), max = Math.max.apply(null, vals.concat([all[key] || 0])) * 1.12 || 1;
+    if(key === 'att') max = 100;
+    var ref = (all[key] || 0) * 100 / max;
+    var order = aggs.slice().sort(function(a, b){ return goodHigh ? (b[key] || 0) - (a[key] || 0) : (a[key] || 0) - (b[key] || 0); });
+    return '<div class="panel sx-p"><div class="head"><div><h2>'+title+'</h2><div class="sub" style="margin-top:4px">הקו האנכי: ממוצע השלוחה '+stPct_(all[key])+'</div></div></div><div class="body">'
+      + order.map(function(a){ return stHBar_(a.cls, a[key] || 0, max, ST_ACCENT, stPct_(a[key]), title + ', כיתה ' + a.cls, '', ref); }).join('') + '</div></div>';
+  }
+  var multiples = '<div class="sx-3">' + panel('נוכחות', 'att', true) + panel('איחורים מהימים', 'lateP', false) + panel('היעדרות ללא אישור', 'unjustP', false) + '</div>';
+
+  // התפלגות מצבים לכל כיתה, 100%
+  var legend = '<div class="st-legend">' + ST_STAT.map(function(s){ return '<span><i style="background:'+s[2]+'"></i>'+s[1]+'</span>'; }).join('') + '</div>';
+  var stacks = aggs.map(function(a){
+    var tot = a.n - a.leave || 1;
+    var segs = ST_STAT.map(function(s){
+      var v = a[s[0]] || 0, p = v * 100 / tot; if(!v) return '';
+      var lbl = p >= 9 ? '<em style="color:'+(s[0]==='present'?'#fff':'#0b0b0b')+'">'+Math.round(p)+'%</em>' : '';
+      return '<span class="sx-seg" style="flex:'+p+' 1 0;background:'+s[2]+'"'+stTipAttr_(stPct_(p) + ' (' + v + ' ימים)', s[1] + ', כיתה ' + a.cls)+'>'+lbl+'</span>';
+    }).join('');
+    return '<div class="sh-row"><div class="sh-l">'+esc(a.cls)+'</div><div class="sx-stack">'+segs+'</div></div>';
+  }).join('');
+
+  // מגמה שבועית לכל כיתה מול ממוצע השלוחה
+  var weeks = {}, wKeys = [];
+  r.byDay.forEach(function(x){
+    var d = new Date(stIso_(x.d) + 'T12:00:00'); d.setDate(d.getDate() - d.getDay());
+    var k = d.toISOString().slice(0,10);
+    if(!weeks[k]){ weeks[k] = {}; wKeys.push(k); }
+    (weeks[k][x.cls] = weeks[k][x.cls] || []).push(x);
+    (weeks[k]['*'] = weeks[k]['*'] || []).push(x);
+  });
+  wKeys.sort();
+  var series = {}; aggs.concat([{ cls:'*' }]).forEach(function(a){ series[a.cls] = wKeys.map(function(k){ var l = weeks[k][a.cls]; return l ? stAgg_(l).att : null; }); });
+  var allVals = []; Object.keys(series).forEach(function(k){ series[k].forEach(function(v){ if(v != null) allVals.push(v); }); });
+  var yMin = allVals.length ? Math.max(0, Math.floor((Math.min.apply(null, allVals) - 2) / 10) * 10) : 0;
+  function spark(c){
+    var W = 220, H = 74, P = 6, n = wKeys.length;
+    function X(i){ return n > 1 ? P + i * (W - 2*P) / (n - 1) : W/2; }
+    function Y(v){ return H - P - (v - yMin) * (H - 2*P) / (100 - yMin || 1); }
+    function path(vals){ var d = '', pen = false; vals.forEach(function(v, i){ if(v == null){ pen = false; return; } d += (pen ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1) + ' '; pen = true; }); return d; }
+    var v = series[c], lastI = -1; v.forEach(function(x, i){ if(x != null) lastI = i; });
+    var grid = [yMin, (yMin + 100) / 2, 100].map(function(g){ return '<line x1="'+P+'" x2="'+(W-P)+'" y1="'+Y(g)+'" y2="'+Y(g)+'" class="sx-grid"/>'; }).join('');
+    var hits = wKeys.map(function(k, i){
+      var tip = 'שבוע מ ' + shortDate(stFromIso_(k)) + ': כיתה ' + (v[i] == null ? 'אין' : stPct_(v[i])) + ', שלוחה ' + stPct_(series['*'][i]);
+      return '<rect x="'+(X(i) - (W - 2*P) / Math.max(1, n - 1) / 2)+'" y="0" width="'+((W - 2*P) / Math.max(1, n - 1))+'" height="'+H+'" fill="transparent"'+stTipAttr_(v[i] == null ? 'אין' : stPct_(v[i]), tip)+'/>';
+    }).join('');
+    return '<div class="sx-spark"><div class="sx-sp-h"><b>כיתה '+esc(c)+'</b><span>'+(lastI >= 0 ? stPct_(v[lastI]) : '')+'</span></div>'
+      + '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" class="sx-svg">'+grid
+      + '<path d="'+path(series['*'])+'" class="sx-avg"/>'
+      + '<path d="'+path(v)+'" class="sx-line"/>'
+      + (lastI >= 0 ? '<circle cx="'+X(lastI)+'" cy="'+Y(v[lastI])+'" r="4" class="sx-dot"/>' : '')
+      + hits + '</svg></div>';
+  }
+  var trend = '<div class="sx-sparks">' + aggs.map(function(a){ return spark(a.cls); }).join('') + '</div>'
+    + '<div class="st-legend"><span><i class="ln" style="background:'+ST_ACCENT+'"></i>הכיתה</span><span><i class="ln" style="background:#9aa5b1"></i>ממוצע השלוחה</span><span class="muted">ציר הנוכחות מ '+yMin+'% עד 100%, זהה לכל הכיתות</span></div>';
+
+  // מפת חום: נוכחות לפי יום בשבוע
+  var wdN = ['ראשון','שני','שלישי','רביעי','חמישי'];
+  var cells = aggs.map(function(a){ return wdN.map(function(n, wd){ var l = r.byDay.filter(function(x){ return x.cls === a.cls && x.wd === wd; }); return l.length ? stAgg_(l).att : null; }); });
+  var hv = []; cells.forEach(function(row){ row.forEach(function(v){ if(v != null) hv.push(v); }); });
+  var hMin = hv.length ? Math.min.apply(null, hv) : 0, hMax = hv.length ? Math.max.apply(null, hv) : 100;
+  function hcol(v){ var t = hMax > hMin ? (v - hMin) / (hMax - hMin) : 1; return ST_SEQ[Math.round(t * (ST_SEQ.length - 1))]; }
+  var heat = '<div class="sx-heat"><div class="sx-hh"></div>' + wdN.map(function(n){ return '<div class="sx-hh">'+n+'</div>'; }).join('')
+    + aggs.map(function(a, i){
+        return '<div class="sx-hl">'+esc(a.cls)+'</div>' + cells[i].map(function(v, wd){
+          if(v == null) return '<div class="sx-hc empty">אין</div>';
+          var c = hcol(v), dark = ST_SEQ.indexOf(c) >= 7;
+          return '<div class="sx-hc" style="background:'+c+';color:'+(dark?'#fff':'#0b0b0b')+'"'+stTipAttr_(stPct_(v), 'נוכחות, כיתה ' + a.cls + ', יום ' + wdN[wd])+'>'+Math.round(v)+'%</div>';
+        }).join('');
+      }).join('') + '</div>'
+    + '<div class="sx-scale"><span>'+Math.round(hMin)+'%</span><i style="background:linear-gradient(to left,'+ST_SEQ.join(',')+')"></i><span>'+Math.round(hMax)+'%</span></div>';
+
+  var table = '<table class="ad-tbl st-tbl"><thead><tr><th>כיתה</th><th>שוחרים</th><th>ימי חובה</th><th>איחורים</th><th>ללא אישור</th><th>בלי דיווח</th><th>נקודות עונש</th><th>מדד</th></tr></thead><tbody>'
+    + aggs.map(function(a){ return '<tr><td>'+esc(a.cls)+(a.eligible?'':' <small class="muted">מעט נתונים</small>')+'</td><td>'+a.students+'</td><td>'+a.D+'</td><td>'+a.late+'</td><td>'+a.unjust+'</td><td>'+a.norep+'</td><td>'+a.pen+'</td><td><b>'+stF1_(a.score)+'</b></td></tr>'; }).join('')
+    + '<tr class="st-total"><td>כל השלוחה</td><td>'+all.students+'</td><td>'+all.D+'</td><td>'+all.late+'</td><td>'+all.unjust+'</td><td>'+all.norep+'</td><td>'+all.pen+'</td><td><b>'+stF1_(all.score)+'</b></td></tr></tbody></table>';
+
+  el('stRes').innerHTML = '<div class="st-range-lbl">'+esc(shortDate(r.from))+' עד '+esc(shortDate(r.to))+'</div>'
+    + hero + formula
+    + '<div class="panel"><div class="head"><div><h2>דירוג הכיתות לפי מדד ההצטיינות</h2><div class="sub" style="margin-top:4px">הכיתה המצטיינת מודגשת. כיתה עם מעט נתונים מוצגת אך לא מדורגת</div></div></div><div class="body sx-rank">'+rank+'</div></div>'
+    + multiples
+    + '<div class="panel"><div class="head"><div><h2>התפלגות הימים לפי מצב</h2><div class="sub" style="margin-top:4px">מתוך ימי הלימוד בלי חופשה שנתית</div></div></div><div class="body">'+legend+stacks+'</div></div>'
+    + '<div class="panel"><div class="head"><div><h2>מגמת נוכחות שבועית</h2></div></div><div class="body">'+trend+'</div></div>'
+    + '<div class="panel"><div class="head"><div><h2>נוכחות לפי יום בשבוע</h2><div class="sub" style="margin-top:4px">כהה יותר = נוכחות גבוהה יותר</div></div></div><div class="body">'+heat+'</div></div>'
+    + '<div class="panel"><div class="head"><div><h2>טבלת המדד</h2></div></div><div class="body" style="padding-top:0;overflow-x:auto">'+table+'</div></div>';
+}
+
+/* בהשוואת תקופות: מדד לכל כיתה לפני ואחרי, והכיתה המשתפרת */
+function stCmpClassesBlock_(sa, sb){
+  stTipInit_();
+  var A = {}, B = {};
+  stClassAggs_(sa).forEach(function(a){ A[a.cls] = a; });
+  stClassAggs_(sb).forEach(function(b){ B[b.cls] = b; });
+  var classes = Object.keys(A).filter(function(c){ return B[c] && A[c].score != null && B[c].score != null; }).sort(stSortCls_);
+  if(!classes.length) return '';
+  var rows = classes.map(function(c){ return { c:c, a:A[c].score, b:B[c].score, d:B[c].score - A[c].score, ok:A[c].eligible && B[c].eligible }; });
+  var best = rows.filter(function(x){ return x.ok; }).sort(function(x, y){ return y.d - x.d; })[0];
+  var lo = Math.max(0, Math.floor(Math.min.apply(null, rows.map(function(x){ return Math.min(x.a, x.b); })) / 10) * 10 - 10);
+  function pos(v){ return (v - lo) * 100 / (100 - lo); }
+  var bell = rows.sort(function(x, y){ return y.d - x.d; }).map(function(x){
+    var l = Math.min(pos(x.a), pos(x.b)), w = Math.abs(pos(x.b) - pos(x.a));
+    return '<div class="sh-row"><div class="sh-l">'+esc(x.c)+(x.ok ? '' : ' <small>מעט נתונים</small>')+'</div><div class="sx-bell">'
+      + '<i class="sx-bl" style="inset-inline-start:'+l+'%;width:'+w+'%"></i>'
+      + '<span class="sx-bd a" style="inset-inline-start:'+pos(x.a)+'%"'+stTipAttr_(stF1_(x.a), 'תקופה א, כיתה ' + x.c)+'></span>'
+      + '<span class="sx-bd b" style="inset-inline-start:'+pos(x.b)+'%"'+stTipAttr_(stF1_(x.b), 'תקופה ב, כיתה ' + x.c)+'></span></div>'
+      + '<div class="sx-bdl '+(x.d >= 0 ? 'good' : 'bad')+'">'+(x.d >= 0 ? '▲ ' : '▼ ')+stF1_(Math.abs(x.d))+'</div></div>';
+  }).join('');
+  return '<div class="panel"><div class="head"><div><h2>מדד ההצטיינות לפי כיתה: לפני ואחרי</h2>'
+    + (best && best.d > 0 ? '<div class="sub" style="margin-top:6px">הכיתה המשתפרת: <b>כיתה '+esc(best.c)+'</b>, עלייה של '+stF1_(best.d)+' נקודות במדד</div>' : '')
+    + '</div></div><div class="body">'
+    + '<div class="st-legend" style="margin:0 0 12px"><span><i class="dot" style="background:'+ST_COLOR_A+'"></i>תקופה א</span><span><i class="dot" style="background:'+ST_COLOR_B+'"></i>תקופה ב</span><span class="muted">הציר מ '+lo+' עד 100</span></div>'
+    + bell + '</div></div>';
 }
 
 /* ============ יציאות וסיורים ============
