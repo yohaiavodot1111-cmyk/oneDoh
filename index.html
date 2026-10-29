@@ -953,6 +953,43 @@
   .ad-sum{padding:6px 0; border-bottom:1px solid var(--line-2); font-size:14.5px;} .ad-arch{color:var(--absent);}
   @media(max-width:900px){ .ad-tiles{grid-template-columns:repeat(3,1fr);} .ad-grid{grid-template-columns:1fr;} }
   @media(max-width:480px){ .ad-tile b{font-size:21px;} }
+
+  /* תפריט נדונים ביומן החודשי */
+  .ml-ny{position:relative;}
+  .ml-ny-menu{position:absolute; top:calc(100% + 6px); inset-inline-end:0; z-index:5; background:#fff; border:1px solid var(--line); border-radius:10px; box-shadow:var(--shadow-md); padding:6px; min-width:240px; display:flex; flex-direction:column;}
+  .ml-ny-menu.hidden{display:none !important;}
+  .ml-ny-menu button{background:none; border:none; text-align:right; padding:10px 12px; border-radius:8px; font-weight:600; font-size:14px; color:var(--ink);}
+  .ml-ny-menu button:hover{background:var(--sky-soft);}
+
+  /* ============ נתונים וסטטיסטיקות ============ */
+  .st-ctl{display:flex; flex-direction:column; gap:14px;}
+  .st-presets{display:flex; flex-wrap:wrap; gap:8px;}
+  .st-range{display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end;}
+  .st-range label{display:flex; flex-direction:column; gap:6px; margin:0; font-size:13px; flex:1 1 150px; max-width:220px;}
+  .st-range-lbl{font-weight:700; color:var(--navy); margin:4px 0 12px;}
+  .st-scope{display:flex; flex-direction:column; gap:6px; max-width:320px; margin:0;}
+  .st-periods{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .st-per{border:1px solid var(--line); border-radius:12px; padding:12px;}
+  .st-per-h{font-weight:700; margin-bottom:8px; display:flex; align-items:center; gap:8px;}
+  .st-per-h i, .st-legend i{display:inline-block; width:12px; height:12px; border-radius:3px;}
+  .st-tbl td, .st-tbl th{text-align:center !important; direction:rtl !important; white-space:nowrap;}
+  .st-tbl td:first-child, .st-tbl th:first-child{text-align:right !important;}
+  .st-tbl tr.st-layer td{background:var(--sky-soft); font-weight:700; color:var(--navy);}
+  .st-tbl tr.st-total td{background:var(--navy); color:#fff; font-weight:700;}
+  .st-d{font-weight:700;} .st-d small{font-weight:500; margin-inline-start:4px;}
+  .st-d.good{color:var(--present);} .st-d.bad{color:var(--absent);}
+  .st-top{display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--line-2);}
+  .st-top:last-child{border-bottom:none;} .st-tn{flex:1;} .st-tn small{color:var(--muted);}
+  .st-chart{display:flex; gap:14px; align-items:flex-end; height:200px; padding-top:18px;}
+  .st-g{flex:1; display:flex; flex-direction:column; align-items:center; height:100%;}
+  .st-g > span{font-size:12.5px; color:var(--muted); margin-top:6px;}
+  .st-bars{flex:1; width:100%; display:flex; gap:2px; align-items:flex-end; justify-content:center;}
+  .st-b{flex:0 1 26px; height:100%; display:flex; flex-direction:column; justify-content:flex-end; align-items:center;}
+  .st-b i{display:block; width:100%; border-radius:4px 4px 0 0;}
+  .st-b em{font-style:normal; font-size:11px; color:var(--ink); margin-bottom:3px; white-space:nowrap;}
+  .st-legend{display:flex; gap:16px; flex-wrap:wrap; margin-top:12px; font-size:13px; align-items:center;}
+  .st-legend span{display:inline-flex; align-items:center; gap:6px;}
+  @media(max-width:700px){ .st-periods{grid-template-columns:1fr;} .st-chart{gap:6px;} }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -1140,6 +1177,10 @@ var RPC_MAP = {
   sysPromote:          ['sys_promote',           ['p_token','p_password','p_phrase','p_map','p_move_commanders']],
   sysPromoteUndo:      ['sys_promote_undo',      ['p_token','p_password','p_phrase']],
   sysChangePassword:   ['sys_change_password',   ['p_token','p_old','p_new']],
+  nadonData:           ['nadon_data',            ['p_token','p_student','p_kind','p_date']],
+  statsCheck:          ['stats_check',           ['p_token','p_pw']],
+  statsPeriod:         ['stats_period',          ['p_token','p_pw','p_from','p_to']],
+  sysSetStatsPassword: ['sys_set_stats_password',['p_token','p_admin_pw','p_new']],
   studentDashboard:    ['student_dashboard',     ['p_token','p_student','p_date']],
   monthLog:            ['month_log',             ['p_token','p_student','p_year','p_month']],
   branchOverview:      ['branch_overview',       ['p_token','p_date']],
@@ -1394,6 +1435,7 @@ function enterPortal(){
   if(App.fromCache){ App.fromCache = false; refreshNow_(); }
 }
 el('logoutBtn').addEventListener('click', function(){
+  if(typeof st !== 'undefined'){ st.pw = null; st.sum = null; st.cmp = null; }
   stopPolling(); stopClock_();
   try { sessionStorage.removeItem('dohehad_session'); } catch(e){}
   App.token=null; App.profile=null; App.initial=null;
@@ -2522,7 +2564,7 @@ function drawAdmin(){
   }).join('') || '<div class="muted">עוד לא בוצע קידום כיתות</div>';
 
   el('view').innerHTML = '<div class="fade">'
-    + '<div class="toolbar"><button class="btn ghost" id="adRefresh">רענון</button><button class="btn ghost" id="adPw">שינוי סיסמה</button></div>'
+    + '<div class="toolbar"><button class="btn ghost" id="adRefresh">רענון</button><button class="btn ghost" id="adPw">שינוי סיסמה</button><button class="btn ghost" id="adStPw">סיסמת אזור הנתונים</button></div>'
     + '<div class="ad-tiles">'+tiles+'</div>'
     + '<div class="ad-grid">'
     +   '<div class="panel"><div class="head"><div><h2>אחסון</h2><div class="sub" style="margin-top:6px">בסיס הנתונים: <b>'+admBytes_(s.dbBytes)+'</b> מתוך 500 MB במסלול החינמי ('+dbPct+'%)'
@@ -2547,6 +2589,7 @@ function drawAdmin(){
     + '</div>';
   el('adRefresh').addEventListener('click', renderAdmin);
   el('adPw').addEventListener('click', admChangePw_);
+  el('adStPw').addEventListener('click', admStatsPw_);
   el('adPromote').addEventListener('click', admPromoteStep1_);
   if(el('adUndo')) el('adUndo').addEventListener('click', admUndo_);
 }
@@ -2633,6 +2676,19 @@ function admUndo_(){
   });
 }
 
+function admStatsPw_(){
+  el('modalHost').innerHTML = '<div class="modal-bg" id="adsBg"><div class="modal"><div class="m-body">'
+    + '<h3>סיסמת אזור הנתונים</h3><p class="muted" style="margin-top:-4px">הסיסמה שראש צוות ומפקד שלוחה מזינים כדי להיכנס לנתונים וסטטיסטיקות.</p>'
+    + '<label>סיסמה חדשה לאזור הנתונים (לפחות 4 תווים)</label><input id="adsNew" autocomplete="off">'
+    + '<label style="margin-top:10px">אימות: סיסמת מנהל המערכת</label><input type="password" id="adsAdm" autocomplete="off">'
+    + '<div class="m-actions"><button class="btn gold" id="adsGo">שמירה</button><button class="btn ghost" id="adsNo">ביטול</button></div>'
+    + '</div></div></div>';
+  el('adsNo').addEventListener('click', closeModal);
+  el('adsGo').addEventListener('click', function(){
+    callServer('sysSetStatsPassword', App.token, el('adsAdm').value, el('adsNew').value.trim()).then(function(){ closeModal(); toast('סיסמת אזור הנתונים עודכנה'); })
+      .catch(function(e){ toast(e.message, true); });
+  });
+}
 function admChangePw_(){
   el('modalHost').innerHTML = '<div class="modal-bg" id="adcBg"><div class="modal"><div class="m-body">'
     + '<h3>שינוי סיסמה</h3>'
@@ -2649,6 +2705,264 @@ function admChangePw_(){
     callServer('sysChangePassword', App.token, el('adcOld').value, n).then(function(){ closeModal(); toast('הסיסמה עודכנה'); })
       .catch(function(e){ toast(e.message, true); });
   });
+}
+
+/* ============ נתונים וסטטיסטיקות ============
+   לראש צוות ולמפקד שלוחה, בסיסמה נוספת שנבדקת בשרת. הסיסמה נשמרת רק בזיכרון של הדף.
+   כל החישובים מבוססים על המצב הסופי של כל יום. אחוזים מחושבים מימי הלימוד בלי חופשה שנתית. */
+var st = { pw:null, tab:'sum', season:null, today:null, sum:null, sumRange:null, cmp:null, cmpReq:null };
+var ST_ORD = ['ט3','ט5','י2','י5','יא2','יא5','יב2','יב5','יג','יד'];
+var ST_COLOR_A = '#2F6EA8', ST_COLOR_B = '#C27A12';
+
+function stLayer_(cls){ return String(cls).replace(/\d+$/, ''); }
+function stLayerName_(l){ return 'שכבת ' + clsHe_(l); }
+function stSortCls_(a, b){ var x = ST_ORD.indexOf(a), y = ST_ORD.indexOf(b); return (x<0?99:x) - (y<0?99:y) || String(a).localeCompare(String(b), 'he'); }
+function stAgg_(list){
+  var a = { n:0, present:0, late:0, just:0, unjust:0, leave:0, norep:0, students:0 };
+  list.forEach(function(x){ ['n','present','late','just','unjust','leave','norep'].forEach(function(k){ a[k] += +x[k] || 0; }); a.students++; });
+  var base = a.n - a.leave;
+  a.base = base;
+  a.att = base ? (a.present + a.late) * 100 / base : null;
+  a.lateP = base ? a.late * 100 / base : null;
+  a.unjustP = base ? a.unjust * 100 / base : null;
+  a.justP = base ? a.just * 100 / base : null;
+  a.norepP = base ? a.norep * 100 / base : null;
+  return a;
+}
+function stPct_(v){ return v == null ? 'אין נתונים' : (Math.round(v * 10) / 10).toFixed(1) + '%'; }
+function stIso_(s){ return String(s).replace(/\//g, '-'); }
+function stFromIso_(s){ return String(s).replace(/-/g, '/'); }
+function stShift_(iso, days){ var d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + days); return d.toISOString().slice(0,10); }
+
+function openStats(){
+  if(st.pw) return renderStats();
+  el('modalHost').innerHTML = '<div class="modal-bg" id="stpBg"><div class="modal"><div class="m-body">'
+    + '<h3>נתונים וסטטיסטיקות</h3><p class="muted" style="margin-top:-4px">הכניסה לאזור הנתונים דורשת סיסמה.</p>'
+    + '<label>סיסמה</label><input type="password" id="stpPw" autocomplete="off" inputmode="numeric">'
+    + '<div class="m-actions"><button class="btn gold" id="stpGo">כניסה</button><button class="btn ghost" id="stpNo">ביטול</button></div>'
+    + '</div></div></div>';
+  setTimeout(function(){ if(el('stpPw')) el('stpPw').focus(); }, 60);
+  function go(){
+    var pw = el('stpPw').value, b = el('stpGo'); b.disabled = true;
+    callServer('statsCheck', App.token, pw).then(function(r){
+      st.pw = pw; st.season = r.seasonStart; st.today = r.today; closeModal(); renderStats();
+    }).catch(function(e){ b.disabled = false; toast(e.message, true); el('stpPw').select(); });
+  }
+  el('stpGo').addEventListener('click', go);
+  el('stpPw').addEventListener('keydown', function(e){ if(e.key === 'Enter') go(); });
+  el('stpNo').addEventListener('click', closeModal);
+}
+
+function renderStats(){
+  App.screen = 'stats';
+  var tabs = '<div class="classtabs" style="margin:6px 0 18px">'
+    + '<button class="tab'+(st.tab==='sum'?' on':'')+' st-tab" data-t="sum">סיכום תקופה</button>'
+    + '<button class="tab'+(st.tab==='cmp'?' on':'')+' st-tab" data-t="cmp">השוואת תקופות</button></div>';
+  el('view').innerHTML = '<div class="fade"><div class="toolbar"><button class="btn ghost" id="stBack">חזרה</button></div>'
+    + '<div class="sc-head"><h2>נתונים וסטטיסטיקות</h2><div class="sub">נתונים מהמצב הסופי של כל יום. האחוזים מחושבים מימי הלימוד (א עד ה, בלי ימים נעולים ובלי חופשה שנתית).</div></div>'
+    + tabs + '<div id="stBody"></div></div>';
+  el('stBack').addEventListener('click', function(){ App.screen = null; route(); });
+  document.querySelectorAll('.st-tab').forEach(function(t){ t.addEventListener('click', function(){ st.tab = t.getAttribute('data-t'); renderStats(); }); });
+  if(st.tab === 'sum') stDrawSumControls_(); else stDrawCmpControls_();
+}
+
+function stFetch_(from, to){
+  return callServer('statsPeriod', App.token, st.pw, from, to).catch(function(e){
+    if(/סיסמת אזור הנתונים/.test(e.message)) st.pw = null;
+    throw e;
+  });
+}
+
+/* ===== סיכום תקופה ===== */
+function stDrawSumControls_(){
+  var r = st.sumRange || { from: stIso_(st.season), to: stIso_(st.today) };
+  var t = stIso_(st.today), m0 = t.slice(0,8) + '01';
+  var pm = new Date(t + 'T12:00:00'); pm.setDate(1); pm.setMonth(pm.getMonth() - 1);
+  var pmFrom = pm.toISOString().slice(0,10), pmTo = stShift_(m0, -1);
+  el('stBody').innerHTML = '<div class="panel"><div class="body st-ctl">'
+    + '<div class="st-presets">'
+    +   '<button class="tr-chip" data-f="'+stIso_(st.season)+'" data-t="'+t+'">מתחילת השנה</button>'
+    +   '<button class="tr-chip" data-f="'+m0+'" data-t="'+t+'">החודש</button>'
+    +   '<button class="tr-chip" data-f="'+pmFrom+'" data-t="'+pmTo+'">החודש הקודם</button>'
+    +   '<button class="tr-chip" data-f="'+stShift_(t,-29)+'" data-t="'+t+'">30 הימים האחרונים</button></div>'
+    + '<div class="st-range"><label>מתאריך<input type="date" id="stF" value="'+r.from+'"></label><label>עד תאריך<input type="date" id="stT" value="'+r.to+'"></label>'
+    + '<button class="btn gold" id="stGo">הצגה</button></div></div></div><div id="stRes"></div>';
+  document.querySelectorAll('.st-presets .tr-chip').forEach(function(c){ c.addEventListener('click', function(){
+    el('stF').value = c.getAttribute('data-f'); el('stT').value = c.getAttribute('data-t'); stRunSum_(); }); });
+  el('stGo').addEventListener('click', stRunSum_);
+  if(st.sum && st.sumRange) stDrawSum_(); else stRunSum_();
+}
+function stRunSum_(){
+  var f = el('stF').value, t = el('stT').value;
+  if(!f || !t || f > t){ toast('יש לבחור טווח תאריכים תקין', true); return; }
+  st.sumRange = { from:f, to:t };
+  el('stRes').innerHTML = spinner();
+  stFetch_(f, t).then(function(r){ st.sum = r; stDrawSum_(); })
+    .catch(function(e){ el('stRes').innerHTML = ''; toast(e.message, true); if(!st.pw) openStats(); });
+}
+function stDrawSum_(){
+  var r = st.sum, all = stAgg_(r.students);
+  var byCls = {}; r.students.forEach(function(x){ (byCls[x.cls] = byCls[x.cls] || []).push(x); });
+  var layers = {}; Object.keys(byCls).forEach(function(c){ (layers[stLayer_(c)] = layers[stLayer_(c)] || []).push(c); });
+  var lOrder = Object.keys(layers).sort(function(a,b){ return stSortCls_(layers[a].sort(stSortCls_)[0], layers[b].sort(stSortCls_)[0]); });
+  function row(label, a, cls){
+    return '<tr class="'+cls+'"><td>'+label+'</td><td>'+a.students+'</td><td><b>'+stPct_(a.att)+'</b></td><td>'+a.late+'</td><td>'+stPct_(a.lateP)+'</td>'
+      + '<td>'+a.unjust+'</td><td>'+stPct_(a.unjustP)+'</td><td>'+a.just+'</td><td>'+stPct_(a.norepP)+'</td></tr>';
+  }
+  var rows = '';
+  lOrder.forEach(function(l){
+    var lst = []; layers[l].forEach(function(c){ lst = lst.concat(byCls[c]); });
+    rows += row(esc(stLayerName_(l)), stAgg_(lst), 'st-layer');
+    layers[l].sort(stSortCls_).forEach(function(c){ rows += row('כיתה ' + esc(c), stAgg_(byCls[c]), ''); });
+  });
+  rows += row('כל השלוחה', all, 'st-total');
+  function top(key, title){
+    var list = r.students.filter(function(x){ return x[key] > 0; }).sort(function(a,b){ return b[key] - a[key] || a.name.localeCompare(b.name,'he'); }).slice(0,10);
+    return '<div class="panel"><div class="head"><div><h2>'+title+'</h2></div></div><div class="body" style="padding-top:4px">'
+      + (list.length ? list.map(function(x, i){ return '<div class="st-top"><span class="scc-n">'+(i+1)+'</span><span class="st-tn">'+esc(x.name)+' <small>'+esc(x.cls)+'</small></span><b>'+x[key]+'</b></div>'; }).join('')
+                     : '<div class="muted">אין</div>') + '</div></div>';
+  }
+  var tiles = [['ימי לימוד בטווח', r.days], ['נוכחות', stPct_(all.att)], ['איחורים', all.late + ' (' + stPct_(all.lateP) + ')'],
+    ['היעדרות ללא אישור', all.unjust + ' (' + stPct_(all.unjustP) + ')'], ['היעדרות מוצדקת', all.just + ' (' + stPct_(all.justP) + ')'], ['ימים בלי דיווח', stPct_(all.norepP)]]
+    .map(function(t){ return '<div class="ad-tile"><b>'+t[1]+'</b><span>'+t[0]+'</span></div>'; }).join('');
+  el('stRes').innerHTML = '<div class="st-range-lbl">'+esc(shortDate(r.from))+' עד '+esc(shortDate(r.to))+'</div>'
+    + '<div class="ad-tiles">'+tiles+'</div>'
+    + '<div class="panel"><div class="head"><div><h2>לפי שכבה וכיתה</h2></div><button class="btn ghost sm" id="stXlsx">הורדת Excel</button></div>'
+    + '<div class="body" style="padding-top:0;overflow-x:auto"><table class="ad-tbl st-tbl"><thead><tr><th></th><th>שוחרים</th><th>נוכחות</th><th>איחורים</th><th>% איחור</th>'
+    + '<th>ללא אישור</th><th>% ללא אישור</th><th>מוצדקות</th><th>לא דיווחו</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>'
+    + '<div class="ad-grid">'+top('late','הכי הרבה איחורים')+top('unjust','הכי הרבה היעדרויות ללא אישור')+'</div>';
+  el('stXlsx').addEventListener('click', function(){ stSumExcel_(byCls, layers, lOrder, all); });
+}
+function stSumExcel_(byCls, layers, lOrder, all){
+  var r = st.sum, wb = new ExcelJS.Workbook();
+  var H = ['', 'שוחרים', 'ימי לימוד', 'נוכחות %', 'איחורים', '% איחור', 'ללא אישור', '% ללא אישור', 'מוצדקות', '% מוצדקות', 'לא דיווחו %'];
+  var ws = wb.addWorksheet('לפי כיתה', { views:[{ rightToLeft:true }] });
+  ws.addRow(['סיכום תקופה ' + shortDate(r.from) + ' עד ' + shortDate(r.to)]).font = { bold:true, size:13 };
+  ws.addRow([]);
+  var h = ws.addRow(H); h.font = { bold:true, color:{ argb:'FFFFFFFF' } }; h.eachCell(function(c){ c.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FF0B3D66' } }; });
+  function line(label, a, bold){
+    var rr = ws.addRow([label, a.students, a.base, +(a.att||0).toFixed(1), a.late, +(a.lateP||0).toFixed(1), a.unjust, +(a.unjustP||0).toFixed(1), a.just, +(a.justP||0).toFixed(1), +(a.norepP||0).toFixed(1)]);
+    if(bold) rr.font = { bold:true };
+  }
+  lOrder.forEach(function(l){
+    var lst = []; layers[l].forEach(function(c){ lst = lst.concat(byCls[c]); });
+    line(stLayerName_(l), stAgg_(lst), true);
+    layers[l].sort(stSortCls_).forEach(function(c){ line('כיתה ' + c, stAgg_(byCls[c]), false); });
+  });
+  line('כל השלוחה', all, true);
+  ws.columns.forEach(function(c, i){ c.width = i === 0 ? 18 : 12; });
+  var ws2 = wb.addWorksheet('לפי שוחר', { views:[{ rightToLeft:true }] });
+  var h2 = ws2.addRow(['שם', 'כיתה', 'ימי לימוד', 'נוכחות %', 'נוכח', 'איחורים', 'ללא אישור', 'מוצדקות', 'חופשה שנתית', 'לא דיווח']);
+  h2.font = { bold:true, color:{ argb:'FFFFFFFF' } }; h2.eachCell(function(c){ c.fill = { type:'pattern', pattern:'solid', fgColor:{ argb:'FF0B3D66' } }; });
+  r.students.slice().sort(function(a,b){ return stSortCls_(a.cls,b.cls) || cmpByLastName_(a.name,b.name); }).forEach(function(x){
+    var a = stAgg_([x]); ws2.addRow([x.name, x.cls, a.base, +(a.att||0).toFixed(1), x.present, x.late, x.unjust, x.just, x.leave, x.norep]);
+  });
+  ws2.columns.forEach(function(c, i){ c.width = i === 0 ? 22 : 11; });
+  wb.xlsx.writeBuffer().then(function(buf){
+    var blob = new Blob([buf], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    var url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = 'סיכום תקופה ' + shortDate(r.from) + ' עד ' + shortDate(r.to) + '.xlsx';
+    document.body.appendChild(a); a.click(); setTimeout(function(){ a.remove(); URL.revokeObjectURL(url); }, 1500);
+  }).catch(function(){ toast('הפקת הקובץ נכשלה', true); });
+}
+
+/* ===== השוואת תקופות ===== */
+function stDrawCmpControls_(){
+  var t = stIso_(st.today), s0 = stIso_(st.season);
+  var q = st.cmpReq || { scope:'all', aF:s0, aT:stShift_(t,-30), bF:stShift_(t,-29), bT:t };
+  if(q.aT < q.aF) q.aT = q.aF;
+  var classes = (cmdState.data && cmdState.data.classes || []).map(function(c){ return c.cls; }).sort(stSortCls_);
+  var layers = []; classes.forEach(function(c){ var l = stLayer_(c); if(layers.indexOf(l) < 0) layers.push(l); });
+  var opts = '<option value="all">כל השלוחה</option>'
+    + '<optgroup label="שכבות">' + layers.map(function(l){ return '<option value="L:'+esc(l)+'"'+(q.scope==='L:'+l?' selected':'')+'>'+esc(stLayerName_(l))+'</option>'; }).join('') + '</optgroup>'
+    + '<optgroup label="כיתות">' + classes.map(function(c){ return '<option value="C:'+esc(c)+'"'+(q.scope==='C:'+c?' selected':'')+'>כיתה '+esc(c)+'</option>'; }).join('') + '</optgroup>';
+  el('stBody').innerHTML = '<div class="panel"><div class="body st-ctl">'
+    + '<label class="st-scope">מה משווים<select id="stScope">'+opts+'</select></label>'
+    + '<div class="st-periods">'
+    +   '<div class="st-per"><div class="st-per-h"><i style="background:'+ST_COLOR_A+'"></i>תקופה א</div><div class="st-range"><label>מתאריך<input type="date" id="stAF" value="'+q.aF+'"></label><label>עד<input type="date" id="stAT" value="'+q.aT+'"></label></div></div>'
+    +   '<div class="st-per"><div class="st-per-h"><i style="background:'+ST_COLOR_B+'"></i>תקופה ב</div><div class="st-range"><label>מתאריך<input type="date" id="stBF" value="'+q.bF+'"></label><label>עד<input type="date" id="stBT" value="'+q.bT+'"></label></div></div>'
+    + '</div><button class="btn gold" id="stCmpGo">השוואה</button></div></div><div id="stRes"></div>';
+  el('stScope').value = q.scope;
+  el('stCmpGo').addEventListener('click', stRunCmp_);
+  if(st.cmp && st.cmpReq) stDrawCmp_();
+}
+function stRunCmp_(){
+  var q = { scope:el('stScope').value, aF:el('stAF').value, aT:el('stAT').value, bF:el('stBF').value, bT:el('stBT').value };
+  if(!q.aF || !q.aT || !q.bF || !q.bT || q.aF > q.aT || q.bF > q.bT){ toast('יש לבחור שני טווחי תאריכים תקינים', true); return; }
+  st.cmpReq = q;
+  el('stRes').innerHTML = spinner();
+  Promise.all([stFetch_(q.aF, q.aT), stFetch_(q.bF, q.bT)]).then(function(rs){ st.cmp = { a:rs[0], b:rs[1] }; stDrawCmp_(); })
+    .catch(function(e){ el('stRes').innerHTML = ''; toast(e.message, true); if(!st.pw) openStats(); });
+}
+function stFilter_(list, scope){
+  if(scope === 'all') return list;
+  var k = scope.slice(0,1), v = scope.slice(2);
+  return list.filter(function(x){ return k === 'L' ? stLayer_(x.cls) === v : x.cls === v; });
+}
+function stDrawCmp_(){
+  var q = st.cmpReq, A = st.cmp.a, B = st.cmp.b;
+  var sa = stFilter_(A.students, q.scope), sb = stFilter_(B.students, q.scope);
+  var a = stAgg_(sa), b = stAgg_(sb);
+  var scopeName = q.scope === 'all' ? 'כל השלוחה' : (q.scope[0] === 'L' ? stLayerName_(q.scope.slice(2)) : 'כיתה ' + q.scope.slice(2));
+  // מדד: האם עלייה טובה
+  var M = [['נוכחות', 'att', true], ['איחורים מהימים', 'lateP', false], ['היעדרות ללא אישור', 'unjustP', false], ['היעדרות מוצדקת', 'justP', false], ['ימים בלי דיווח', 'norepP', false]];
+  function delta(va, vb, upGood){
+    if(va == null || vb == null) return '<td class="muted">אין נתונים</td>';
+    var dlt = Math.round((vb - va) * 10) / 10;
+    if(Math.abs(dlt) < 0.1) return '<td class="st-d">ללא שינוי</td>';
+    var good = (dlt > 0) === upGood;
+    return '<td class="st-d '+(good?'good':'bad')+'">'+(dlt > 0 ? '▲ ' : '▼ ')+Math.abs(dlt).toFixed(1)+' נק\' <small>'+(good?'שיפור':'הרעה')+'</small></td>';
+  }
+  var mrows = M.map(function(m){ return '<tr><td>'+m[0]+'</td><td>'+stPct_(a[m[1]])+'</td><td>'+stPct_(b[m[1]])+'</td>'+delta(a[m[1]], b[m[1]], m[2])+'</tr>'; }).join('')
+    + '<tr><td>ימי לימוד</td><td>'+A.days+'</td><td>'+B.days+'</td><td></td></tr>'
+    + '<tr><td>איחורים (מספר)</td><td>'+a.late+'</td><td>'+b.late+'</td><td></td></tr>'
+    + '<tr><td>היעדרויות ללא אישור (מספר)</td><td>'+a.unjust+'</td><td>'+b.unjust+'</td><td></td></tr>';
+  // נוכחות לפי יום בשבוע
+  function wdAtt(src){
+    var out = [0,1,2,3,4].map(function(){ return []; });
+    stFilter_(src.byDay, q.scope).forEach(function(x){ if(x.wd >= 0 && x.wd <= 4) out[x.wd].push(x); });
+    return out.map(function(l){ return l.length ? stAgg_(l).att : null; });
+  }
+  var wa = wdAtt(A), wb = wdAtt(B), names = ['ראשון','שני','שלישי','רביעי','חמישי'];
+  var vals = wa.concat(wb).filter(function(v){ return v != null; });
+  var lo = vals.length ? Math.max(0, Math.floor(Math.min.apply(null, vals) / 10) * 10 - 10) : 0;
+  function bar(v, color, per, day){
+    if(v == null) return '<div class="st-b"><i style="height:0"></i><em>אין</em></div>';
+    var h = Math.max(2, (v - lo) * 100 / (100 - lo));
+    return '<div class="st-b" title="'+per+', '+day+': '+stPct_(v)+'"><em>'+Math.round(v)+'%</em><i style="height:'+h+'%;background:'+color+'"></i></div>';
+  }
+  var chart = '<div class="st-chart">' + names.map(function(n, i){
+    return '<div class="st-g"><div class="st-bars">'+bar(wa[i], ST_COLOR_A, 'תקופה א', n)+bar(wb[i], ST_COLOR_B, 'תקופה ב', n)+'</div><span>'+n+'</span></div>'; }).join('') + '</div>'
+    + '<div class="st-legend"><span><i style="background:'+ST_COLOR_A+'"></i>תקופה א</span><span><i style="background:'+ST_COLOR_B+'"></i>תקופה ב</span><span class="muted">הציר מתחיל ב '+lo+'%</span></div>';
+  // פירוט: כיתות (לשלוחה או לשכבה) או שוחרים (לכיתה)
+  var detail;
+  if(q.scope[0] === 'C'){
+    var ids = {}; sa.concat(sb).forEach(function(x){ ids[x.id] = x.name; });
+    var list = Object.keys(ids).map(function(id){
+      var xa = sa.filter(function(x){ return x.id === id; }), xb = sb.filter(function(x){ return x.id === id; });
+      var aa = stAgg_(xa), bb = stAgg_(xb);
+      return { name: ids[id], aa:aa, bb:bb, d: (bb.att != null && aa.att != null) ? bb.att - aa.att : 0 };
+    }).sort(function(x, y){ return x.d - y.d || cmpByLastName_(x.name, y.name); });
+    detail = '<div class="panel"><div class="head"><div><h2>לפי שוחר</h2><div class="sub" style="margin-top:6px">ממוין מהירידה הגדולה בנוכחות</div></div></div><div class="body" style="padding-top:0;overflow-x:auto"><table class="ad-tbl st-tbl"><thead><tr><th>שם</th>'
+      + '<th>נוכחות א</th><th>נוכחות ב</th><th>שינוי</th><th>איחורים א</th><th>איחורים ב</th><th>ללא אישור א</th><th>ללא אישור ב</th></tr></thead><tbody>'
+      + list.map(function(x){ return '<tr><td>'+esc(x.name)+'</td><td>'+stPct_(x.aa.att)+'</td><td>'+stPct_(x.bb.att)+'</td>'+delta(x.aa.att, x.bb.att, true)
+        + '<td>'+x.aa.late+'</td><td>'+x.bb.late+'</td><td>'+x.aa.unjust+'</td><td>'+x.bb.unjust+'</td></tr>'; }).join('')
+      + '</tbody></table></div></div>';
+  } else {
+    var cls = {}; sa.concat(sb).forEach(function(x){ cls[x.cls] = 1; });
+    detail = '<div class="panel"><div class="head"><div><h2>לפי כיתה</h2></div></div><div class="body" style="padding-top:0;overflow-x:auto"><table class="ad-tbl st-tbl"><thead><tr><th>כיתה</th>'
+      + '<th>נוכחות א</th><th>נוכחות ב</th><th>שינוי</th><th>% איחור א</th><th>% איחור ב</th><th>% ללא אישור א</th><th>% ללא אישור ב</th></tr></thead><tbody>'
+      + Object.keys(cls).sort(stSortCls_).map(function(c){
+          var aa = stAgg_(sa.filter(function(x){ return x.cls === c; })), bb = stAgg_(sb.filter(function(x){ return x.cls === c; }));
+          return '<tr><td>כיתה '+esc(c)+'</td><td>'+stPct_(aa.att)+'</td><td>'+stPct_(bb.att)+'</td>'+delta(aa.att, bb.att, true)
+            + '<td>'+stPct_(aa.lateP)+'</td><td>'+stPct_(bb.lateP)+'</td><td>'+stPct_(aa.unjustP)+'</td><td>'+stPct_(bb.unjustP)+'</td></tr>'; }).join('')
+      + '</tbody></table></div></div>';
+  }
+  el('stRes').innerHTML = '<div class="st-range-lbl">'+esc(scopeName)+': תקופה א '+esc(shortDate(A.from))+' עד '+esc(shortDate(A.to))
+    + ' | תקופה ב '+esc(shortDate(B.from))+' עד '+esc(shortDate(B.to))+'</div>'
+    + '<div class="ad-grid"><div class="panel"><div class="head"><div><h2>מדדים מרכזיים</h2></div></div><div class="body" style="padding-top:0"><table class="ad-tbl st-tbl st-m"><thead><tr><th>מדד</th><th>תקופה א</th><th>תקופה ב</th><th>שינוי</th></tr></thead><tbody>'+mrows+'</tbody></table></div></div>'
+    + '<div class="panel"><div class="head"><div><h2>נוכחות לפי יום בשבוע</h2></div></div><div class="body">'+chart+'</div></div></div>'
+    + detail;
 }
 
 /* ============ יציאות וסיורים ============
@@ -3214,6 +3528,7 @@ function paintCommander(d){
         + '<button class="btn ghost" id="tripsBtn">יציאות וסיורים</button>'
         + ((p.role==='מק"ס'||p.role==='ראש צוות'||p.role==='מפקד שלוחה') ? '<button class="btn ghost" id="schedBtn">מערכת שעות</button>' : '')
         + (p.canSeeAll ? '<button class="btn ghost" id="dashBtn">מבט שלוחה</button>' : '')
+        + (p.canSeeAll ? '<button class="btn ghost" id="statsBtn">נתונים וסטטיסטיקות</button>' : '')
         + (canFuture ? '<button class="btn ghost" id="futureBtn">'+(d.futureOpen?'סגירת דיווח עתידי':'פתיחת דיווח עתידי')+'</button>' : '')
         + (oldBar ? '<button class="btn ghost" id="bulkBtn">דיווח גורף</button>' : '')
         + (canFuture ? '<button class="btn ghost" id="lockBtn">'+((d.dayLock&&d.dayLock.locked)?'ביטול נעילת היום':'נעילת היום')+'</button>' : '')
@@ -3241,6 +3556,7 @@ function paintCommander(d){
 function bindCmdTop(){
   if(el('genBtn')) el('genBtn').addEventListener('click', openGenerate);
   if(el('tripsBtn')) el('tripsBtn').addEventListener('click', openTrips);
+  if(el('statsBtn')) el('statsBtn').addEventListener('click', openStats);
   if(el('schedBtn')) el('schedBtn').addEventListener('click', function(){ sched.edit = false; openSched((cmdState.data && cmdState.data.classes[cmdState.active] && cmdState.data.classes[cmdState.active].cls) || ''); });
   if(el('dashBtn')) el('dashBtn').addEventListener('click', renderDashboard);
   if(el('futureBtn')) el('futureBtn').addEventListener('click', function(){
@@ -3333,7 +3649,8 @@ function renderClassPane(){
     var sel = '<select class="sel-sm stat-sel" data-id="'+esc(s.id)+'" '+(ok?'':'disabled')+'>'
       + statuses.map(function(o){ return '<option '+(o===s.status?'selected':'')+'>'+esc(o)+'</option>'; }).join('') + '</select>';
     var reason = '<input class="reason-inp reason-cell" data-id="'+esc(s.id)+'" value="'+esc(s.reason)+'" placeholder="סיבה" '+(ok?'':'disabled')+'>';
-    var nadonBtn = (s.status==='איחור') ? '<button class="btn slim sm act-nadon" data-id="'+esc(s.id)+'">נדון</button>' : '';
+    var nadonKind = (s.status==='איחור') ? 'late' : (s.status==='היעדרות ללא אישור' ? 'absent' : '');
+    var nadonBtn = nadonKind ? '<button class="btn slim sm act-nadon" data-id="'+esc(s.id)+'" data-kind="'+nadonKind+'">נדון</button>' : '';
     var presentBtn = s.noReport ? '<button class="btn sm present act-present" data-id="'+esc(s.id)+'">✓ נוכח</button>' : '';
     var actions = ok
       ? '<div class="rowactions">'+presentBtn+(s.noReport?'':'<button class="btn slim sm act-approve" data-id="'+esc(s.id)+'">אישור</button>')
@@ -3409,7 +3726,8 @@ function renderClassPane(){
     var reasonHtml = needReason
       ? '<div class="row2"><input class="reason-inp reason-cell-m" data-id="'+esc(s.id)+'" value="'+esc(s.reason)+'" placeholder="סיבה"></div>' : '';
 
-    var nadonBtnM = (s.status==='איחור') ? '<button class="btn ghost act-nadon" data-id="'+esc(s.id)+'" style="margin-top:8px;width:100%">הורדת נדון איחור</button>' : '';
+    var nadonKindM = (s.status==='איחור') ? 'late' : (s.status==='היעדרות ללא אישור' ? 'absent' : '');
+    var nadonBtnM = nadonKindM ? '<button class="btn ghost act-nadon" data-id="'+esc(s.id)+'" data-kind="'+nadonKindM+'" style="margin-top:8px;width:100%">'+(nadonKindM==='late'?'הורדת נדון איחור':'הורדת נדון היעדרות')+'</button>' : '';
     var acts = (s.noReport
       ? '<div class="acts single"><button class="btn act-save-m" data-id="'+esc(s.id)+'">שמירה</button></div>'
       : '<div class="acts"><button class="btn gold act-approve-m" data-id="'+esc(s.id)+'">אישור</button>'
@@ -3463,7 +3781,7 @@ function renderClassPane(){
 
   // כפתור הנדון פעיל לכל מי שרואה את הכיתה, גם בצפייה בלבד
   document.querySelectorAll('.act-nadon').forEach(function(b){
-    b.addEventListener('click', function(){ openNadon(b.getAttribute('data-id')); });
+    b.addEventListener('click', function(){ openNadon(b.getAttribute('data-id'), App.date, false, b.getAttribute('data-kind') || 'late'); });
   });
   bindCheckoutApprove_();
   // לחיצה על שם פותחת את כרטיס השוחר, במחשב ובטלפון
@@ -4255,7 +4573,8 @@ function openPrintable(data){
 /* ============ נדון איחור ============ */
 function heDate_(str){ var p=String(str).split('/'); return (+p[2])+'/'+(+p[1])+'/'+p[0]; }
 
-function openNadon(studentId, dateStr, yearly){
+function openNadon(studentId, dateStr, yearly, kind){
+  kind = kind || 'late';
   // פותחים את החלון מיד בלחיצה, כדי לשמור על מחוות המשתמש. אם הדפדפן חוסם, יש מסלול חלופי בתוך הדף.
   var w = null;
   try { w = window.open('', '_blank'); } catch(e){ w = null; }
@@ -4267,10 +4586,12 @@ function openNadon(studentId, dateStr, yearly){
       w.document.close();
     } catch(e){}
   }
-  var req = yearly ? callServer('nadonYearInfo', App.token, studentId)
+  var req = kind !== 'late' ? callServer('nadonData', App.token, studentId, kind, yearly ? '' : (dateStr || App.date))
+          : yearly ? callServer('nadonYearInfo', App.token, studentId)
                    : callServer('nadonInfo', App.token, studentId, dateStr || App.date);
   req.then(function(d){
-    d.yearly = !!yearly;
+    d.yearly = !!yearly; d.kind = kind;
+    if(kind === 'late' && yearly) d.items = (d.lates || []).map(function(x){ return { date:x.date, reason:x.reason, type:'late' }; });
     if(w){ writeNadonDoc(w, d); }
     else { nadonOverlay(d); }   // חלון נחסם, מציגים בתוך הדף עם כפתור הדפסה
   }).catch(function(e){ try{ if(w) w.close(); }catch(_){} toast(e.message, true); });
@@ -4302,14 +4623,14 @@ function nadonCountText_(n){
 }
 
 /* נדון שנתי: תאריכי האיחורים על שורות הטופס. עד 7 איחורים, אחד בשורה עם הסיבה. מעבר לכך, כמה בשורה. */
-function nadonYearLines_(lates){
-  var items = lates.map(function(x){ return { d: heDate_(x.date), r: x.reason || '' }; });
+function nadonYearLines_(lates, withType){
+  var items = lates.map(function(x){ return { d: heDate_(x.date), r: (withType ? (x.type === 'late' ? 'איחור' : 'היעדרות') + (x.reason ? ': ' : '') : '') + (x.reason || ''), t: x.type }; });
   var perLine = items.length <= 7 ? 1 : Math.ceil(items.length / 7);
   var lines = [];
   for(var i=0;i<items.length;i+=perLine){
     var chunk = items.slice(i, i+perLine).map(function(x, k){
       var num = (i+k+1) + '.';
-      var txt = '<span class="ltr">' + esc(x.d) + '</span>' + (perLine===1 && x.r ? '  ' + esc(x.r) : '');
+      var txt = '<span class="ltr">' + esc(x.d) + '</span>' + (perLine===1 && x.r ? '  ' + esc(x.r) : (perLine>1 && withType ? ' ' + (x.t === 'late' ? 'א' : 'ה') : ''));
       return num + ' ' + txt;
     });
     lines.push('<div class="uline filled">' + chunk.join('&nbsp;&nbsp;&nbsp;&nbsp;') + '</div>');
@@ -4318,6 +4639,14 @@ function nadonYearLines_(lates){
   return lines.join('');
 }
 
+/* משפט הגוף בנדון לפי הסוג */
+function nadonSentence_(d){
+  var late = 'איחר\\ה למסדר בוקר ' + esc(nadonCountText_(d.lateCount));
+  var abs = 'נעדר\\ה ללא אישור ' + esc(nadonCountText_(d.absentCount));
+  if(d.kind === 'absent') return abs;
+  if(d.kind === 'both') return late + ' ו' + abs;
+  return late;
+}
 function writeNadonDoc(w, d){
   var cmd = d.commander || {};
   var css = ''
@@ -4347,7 +4676,7 @@ function writeNadonDoc(w, d){
     + '.uline.filled{ height:auto; min-height:26px; padding:2px 4px 3px; font-size:14px; }';
 
   var html = '<!DOCTYPE html><html lang="he" dir="rtl"><head><meta charset="utf-8">'
-    + '<title>' + (d.yearly ? 'נדון איחורים שנתי ' : 'נדון איחור ') + esc(d.name) + '</title>'
+    + '<title>' + ({ late:(d.yearly?'נדון איחורים שנתי ':'נדון איחור '), absent:(d.yearly?'נדון היעדרויות שנתי ':'נדון היעדרות '), both:'נדון מתכלל ' }[d.kind || 'late']) + esc(d.name) + '</title>'
     + '<style>'+css+'</style></head><body>'
     + '<div class="cls">שמור</div>'
     + '<table class="ctl"><tbody>'
@@ -4367,12 +4696,13 @@ function writeNadonDoc(w, d){
     + '<div class="row2">'
     +   '<div class="fld">כיתה: <span class="v">'+esc(d.cls)+'</span></div>'
     + '</div>'
-    + '<div class="subj"><u>הנדון:</u>&nbsp;&nbsp;&nbsp;איחור .</div>'
+    + '<div class="subj"><u>הנדון:</u>&nbsp;&nbsp;&nbsp;' + ({ late:'איחור', absent:'היעדרות', both:'איחורים והיעדרויות' }[d.kind || 'late']) + ' .</div>'
     + '<div class="body-line">בתאריך ' + esc(heDate_(d.date)) + ' החניך\\ה ' + esc(d.name) + '</div>'
     + (d.yearly
-        ? '<div class="body-line">איחר\\ה למסדר בוקר ' + esc(nadonCountText_(d.lateCount)) + ' מתחילת שנת הלימודים (' + esc(heDate_(d.seasonStart)) + ')</div>'
-          + nadonYearLines_(d.lates || [])
-        : '<div class="body-line">איחר\\ה למסדר בוקר ' + esc(nadonCountText_(d.lateCount)) + ' במהלך השבוע</div>'
+        ? '<div class="body-line">' + nadonSentence_(d) + ' מתחילת שנת הלימודים (' + esc(heDate_(d.seasonStart)) + ')'
+          + (d.kind === 'both' && (d.items||[]).length > 7 ? ' (א איחור, ה היעדרות)' : '') + '</div>'
+          + nadonYearLines_(d.items || d.lates || [], d.kind === 'both')
+        : '<div class="body-line">' + nadonSentence_(d) + ' במהלך השבוע</div>'
           + '<div class="uline"></div><div class="uline"></div><div class="uline"></div>'
           + '<div class="uline"></div><div class="uline"></div><div class="uline"></div><div class="uline"></div>')
     + '<div class="note">החניך יודע כי הדבר מצוין בתיקו האישי.</div>'
@@ -4460,7 +4790,8 @@ function drawMonth(){
     + '<div class="dhead"><div><div class="dname">יומן חודשי</div>'
     +   '<div class="dmeta">'+esc(d.name)+' | כיתה '+esc(d.cls)+'</div></div>'
     +   '<div style="display:flex;gap:8px;flex-wrap:wrap">'
-    +   (mlState.forCommander ? '<button class="btn ghost sm" id="mlYearNadon">נדון איחורים מתחילת השנה</button>' : '')
+    +   (mlState.forCommander ? '<div class="ml-ny"><button class="btn ghost sm" id="mlYearNadon">נדונים מתחילת השנה</button>'
+          + '<div class="ml-ny-menu hidden" id="mlYearMenu"><button data-k="late">נדון איחורים</button><button data-k="absent">נדון היעדרויות</button><button data-k="both">נדון מתכלל (איחורים והיעדרויות)</button></div></div>' : '')
     +   '<button class="btn ghost sm" id="mlClose">סגירה</button></div></div>'
     + '<div class="m-body">'
     +   '<div class="ml-nav"><button class="btn ghost sm" id="mlPrev">חודש קודם</button>'
@@ -4473,7 +4804,12 @@ function drawMonth(){
     +   '<div id="mlDetail" class="ml-detail muted">בחרו יום כדי לראות את הדיווח</div>'
     + '</div></div></div>';
   el('mlClose').addEventListener('click', closeModal);
-  if(el('mlYearNadon')) el('mlYearNadon').addEventListener('click', function(){ openNadon(d.id || mlState.id, null, true); });
+  if(el('mlYearNadon')){
+    el('mlYearNadon').addEventListener('click', function(e){ e.stopPropagation(); el('mlYearMenu').classList.toggle('hidden'); });
+    el('mlYearMenu').querySelectorAll('button').forEach(function(b){
+      b.addEventListener('click', function(){ el('mlYearMenu').classList.add('hidden'); openNadon(d.id || mlState.id, null, true, b.getAttribute('data-k')); });
+    });
+  }
   el('mlbg').addEventListener('click', function(e){ if(e.target===el('mlbg')) closeModal(); });
   el('mlPrev').addEventListener('click', function(){ shiftMonth(-1); });
   el('mlNext').addEventListener('click', function(){ shiftMonth(1); });
@@ -4499,8 +4835,8 @@ function showDay(dateStr){
     body += '<div class="muted">לא דווח ביום זה</div>';
   }
   // נדון איחור לאותו יום, בתאריך האיחור
-  if(mlState.forCommander && x.status==='איחור'){
-    body += '<button class="btn slim sm" id="mldNadon" style="margin-top:10px">הפקת נדון איחור ליום זה</button>';
+  if(mlState.forCommander && (x.status==='איחור' || x.status==='היעדרות ללא אישור')){
+    body += '<button class="btn slim sm" id="mldNadon" style="margin-top:10px">'+(x.status==='איחור' ? 'הפקת נדון איחור ליום זה' : 'הפקת נדון היעדרות ליום זה')+'</button>';
   }
   // מפקד יכול לתקן דיווח ישן, שוחר לא
   if(mlState.forCommander){
@@ -4512,7 +4848,7 @@ function showDay(dateStr){
   det.className='ml-detail';
   det.innerHTML = head + body;
   det.classList.remove('pop'); void det.offsetWidth; det.classList.add('pop');
-  if(el('mldNadon')) el('mldNadon').addEventListener('click', function(){ openNadon(d.id || mlState.id, dateStr, false); });
+  if(el('mldNadon')) el('mldNadon').addEventListener('click', function(){ openNadon(d.id || mlState.id, dateStr, false, x.status==='איחור' ? 'late' : 'absent'); });
   if(mlState.forCommander && el('mldSave')){
     el('mldSave').addEventListener('click', function(){
       var st=el('mldSel').value, rs=el('mldReason').value.trim();
