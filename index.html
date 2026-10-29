@@ -920,6 +920,39 @@
   .scc-n{flex:0 0 26px; height:26px; border-radius:50%; background:var(--sky-soft); color:var(--navy); font-weight:700; font-size:13px; display:flex; align-items:center; justify-content:center;}
   .scc-s{flex:1 1 auto; font-weight:600; font-size:15px;}
   .scc-time{font-size:12.5px; color:var(--muted); direction:ltr;}
+
+  /* ============ מנהל מערכת ============ */
+  .ad-tiles{display:grid; grid-template-columns:repeat(6,1fr); gap:10px; margin-bottom:16px;}
+  .ad-tile{background:#fff; border:1px solid var(--line); border-radius:12px; padding:14px 12px; text-align:center; box-shadow:var(--shadow-sm);}
+  .ad-tile b{display:block; font-family:var(--display); font-size:26px; color:var(--navy); line-height:1.15;}
+  .ad-tile span{font-size:12.5px; color:var(--muted);}
+  .ad-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;}
+  .ad-grid .panel{margin:0;}
+  .ad-prog.hot i{background:var(--absent);}
+  .ad-tbl{width:100%; border-collapse:collapse; font-size:13.5px;}
+  .ad-tbl th{text-align:right; color:var(--muted); font-weight:600; font-size:12.5px; padding:8px 6px; border-bottom:1px solid var(--line);}
+  .ad-tbl td{padding:7px 6px; border-bottom:1px solid var(--line-2);}
+  .ad-tbl td:nth-child(2), .ad-tbl td:nth-child(3), .ad-tbl th:nth-child(2), .ad-tbl th:nth-child(3){text-align:left; direction:ltr;}
+  .ad-map td{vertical-align:middle;} .ad-map td:nth-child(2){text-align:center; direction:rtl;} .ad-map input{padding:8px 10px;}
+  .ad-map th:nth-child(2){text-align:center;} .ad-arrow{color:var(--muted); text-align:center; font-size:18px;}
+  .ad-bars{display:flex; align-items:flex-end; gap:3px; height:150px; direction:ltr;}
+  .ad-bar{flex:1 1 0; height:100%; display:flex; flex-direction:column; justify-content:flex-end; position:relative;}
+  .ad-bar i{display:block; background:var(--blue); border-radius:3px 3px 0 0; min-height:0;}
+  .ad-bar.we i{background:var(--sky);}
+  .ad-bar span{position:absolute; bottom:-18px; left:50%; transform:translateX(-50%); font-size:10px; color:var(--muted); white-space:nowrap;}
+  .ad-lbl{font-weight:700; font-size:13.5px; color:var(--navy); margin:18px 0 8px;}
+  .ad-chips{display:flex; flex-wrap:wrap; gap:6px;}
+  .ad-chip{background:var(--sky-soft); border-radius:99px; padding:5px 12px; font-size:13px;}
+  .ad-chip b{color:var(--navy); margin-inline-start:4px;}
+  .ad-danger{border-top:3px solid var(--late);}
+  .ad-actions{display:flex; gap:10px; flex-wrap:wrap;}
+  .ad-promo{padding:10px 0; border-bottom:1px solid var(--line-2); font-size:13.5px;}
+  .ad-promo.undone{opacity:.6;} .ad-undone{color:var(--absent); font-weight:700;}
+  .ad-radio{display:flex; align-items:flex-start; gap:8px; font-weight:500; font-size:14px; margin:8px 0; cursor:pointer;}
+  .ad-radio input{width:auto; margin-top:3px;}
+  .ad-sum{padding:6px 0; border-bottom:1px solid var(--line-2); font-size:14.5px;} .ad-arch{color:var(--absent);}
+  @media(max-width:900px){ .ad-tiles{grid-template-columns:repeat(3,1fr);} .ad-grid{grid-template-columns:1fr;} }
+  @media(max-width:480px){ .ad-tile b{font-size:21px;} }
 </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -950,10 +983,14 @@
       <input id="idInput" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off"
         spellcheck="false" name="dohehad-id-field" placeholder="הזינו את המספר המזהה שלכם">
       <div id="pwWrap" class="hidden" style="margin-top:14px">
-        <div class="banner" style="margin-bottom:12px;border-inline-start-color:var(--blue)">על מנת לפתוח את ממשק הניהול, יש להזין את הסיסמה שלך</div>
+        <div class="banner" id="pwMsg" style="margin-bottom:12px;border-inline-start-color:var(--blue)">על מנת לפתוח את ממשק הניהול, יש להזין את הסיסמה שלך</div>
         <label for="pwInput">סיסמה</label>
         <input id="pwInput" type="password" autocomplete="off" autocorrect="off" autocapitalize="off"
           spellcheck="false" name="dohehad-pw-field" placeholder="הזינו את הסיסמה שלכם">
+        <div id="pw2Wrap" class="hidden" style="margin-top:12px">
+          <label for="pwInput2">שוב את הסיסמה</label>
+          <input id="pwInput2" type="password" autocomplete="off" spellcheck="false" placeholder="הזינו את הסיסמה פעם נוספת">
+        </div>
       </div>
       <button class="btn gold" id="loginBtn">כניסה למערכת</button>
 
@@ -1099,6 +1136,10 @@ var RPC_MAP = {
   schedSave:           ['schedule_save',         ['p_token','p_class','p_data','p_source']],
   classRoster:         ['class_roster',          ['p_token','p_classes']],
   classSetHomeroom:    ['class_set_homeroom',    ['p_token','p_class','p_name']],
+  sysStats:            ['sys_stats',             ['p_token']],
+  sysPromote:          ['sys_promote',           ['p_token','p_password','p_phrase','p_map','p_move_commanders']],
+  sysPromoteUndo:      ['sys_promote_undo',      ['p_token','p_password','p_phrase']],
+  sysChangePassword:   ['sys_change_password',   ['p_token','p_old','p_new']],
   studentDashboard:    ['student_dashboard',     ['p_token','p_student','p_date']],
   monthLog:            ['month_log',             ['p_token','p_student','p_year','p_month']],
   branchOverview:      ['branch_overview',       ['p_token','p_date']],
@@ -1232,11 +1273,18 @@ function doLogin(){
   var pwVisible = el('pwWrap') && !el('pwWrap').classList.contains('hidden');
   var pw = (pwVisible && el('pwInput')) ? el('pwInput').value : '';
   if(!id){ toast('יש להזין מספר מזהה', true); return; }
+  // קביעת סיסמה בכניסה ראשונה: הסיסמה מוזנת פעמיים
+  if(pwVisible && el('pw2Wrap') && !el('pw2Wrap').classList.contains('hidden')){
+    if(pw.length < 8){ toast('הסיסמה צריכה להכיל לפחות 8 תווים', true); return; }
+    if(pw !== el('pwInput2').value){ toast('הסיסמאות אינן זהות', true); return; }
+  }
   el('loginBtn').disabled=true; el('loginBtn').textContent='מתחבר';
   callServer('login', id, pw).then(function(r){
     el('loginBtn').disabled=false; el('loginBtn').textContent='כניסה למערכת';
     if(r && r.needPassword){
       if(el('pwWrap')) el('pwWrap').classList.remove('hidden');
+      if(el('pwMsg')) el('pwMsg').textContent = r.message || 'על מנת לפתוח את ממשק הניהול, יש להזין את הסיסמה שלך';
+      if(el('pw2Wrap')){ el('pw2Wrap').classList.toggle('hidden', !r.setup); if(el('pwInput2')) el('pwInput2').value = ''; }
       if(el('pwInput')){ el('pwInput').value=''; el('pwInput').focus(); }
       return;
     }
@@ -1249,6 +1297,7 @@ function doLogin(){
     try { sessionStorage.setItem('dohehad_session', JSON.stringify({token:r.token, profile:r.profile})); } catch(e){}
     el('idInput').value = ''; if(el('pwInput')) el('pwInput').value = '';
     if(el('pwWrap')) el('pwWrap').classList.add('hidden');
+    if(el('pw2Wrap')){ el('pw2Wrap').classList.add('hidden'); el('pwInput2').value = ''; }
     enterPortal();
     startRealtime();
   }).catch(function(e){ el('loginBtn').disabled=false; el('loginBtn').textContent='כניסה למערכת'; toast(e.message, true); });
@@ -1257,6 +1306,7 @@ function doLogin(){
 /* רענון שקט מיד אחרי הצגה מהמטמון, כדי שהנתונים יהיו עדכניים בלי שהמשתמש ימתין. */
 function refreshNow_(){
   if(!App.token || !App.profile) return;
+  if(App.profile.kind === 'admin') return;
   if(App.profile.kind === 'duty'){ callServer('dutyGetRoster', App.token).then(function(d){ saveScreen_(d); if(!busyNow()) paintDuty(d); }).catch(function(){}); return; }
   var isStu = (App.profile.kind === 'student');
   var action = isStu ? 'studentGetDay' : 'commanderGetClasses';
@@ -1324,10 +1374,11 @@ function enterPortal(){
   el('login').classList.add('hidden'); el('portal').classList.remove('hidden');
   var p=App.profile;
   el('whoName').textContent = p.name||'';
-  el('whoRole').textContent = p.kind==='student' ? ('כיתה '+p.cls) : (p.kind==='duty' ? ('חנתר | כיתה '+(p.classes||[]).join(', ')) : (p.role + (p.rank?(' | '+p.rank):'')));
+  el('whoRole').textContent = p.kind==='admin' ? 'נתוני מערכת וקידום כיתות' : p.kind==='student' ? ('כיתה '+p.cls) : (p.kind==='duty' ? ('חנתר | כיתה '+(p.classes||[]).join(', ')) : (p.role + (p.rank?(' | '+p.rank):'')));
   el('stripDate').innerHTML = '<b>'+niceDate(App.date)+'</b>';
   el('stripScope').innerHTML = p.kind==='student' ? 'דיווח אישי'
     : p.kind==='duty' ? ('סימון נוכחות <b>כיתה '+esc((p.classes||[]).join(', '))+'</b>')
+    : p.kind==='admin' ? 'ניהול מערכת <b>ללא גישה לנתוני שוחרים</b>'
     : ('היקף אחריות <b>'+(p.canSeeAll ? 'כלל השלוחה' : ('כיתות '+p.classes.join(', ')))+'</b>');
   var vn = el('verNote');
   if(vn){ vn.textContent = ''; }
@@ -1360,6 +1411,7 @@ function isDesktop_(){ return window.matchMedia('(min-width:900px)').matches; }
 function route(fromCache){
   App.screen = null;
   if(el('stripDate') && App.date) el('stripDate').innerHTML = '<b>'+niceDate(App.date)+'</b>';   // חזרה מדוח של תאריך אחר
+  if(App.profile.kind==='admin') return renderAdmin();
   if(App.profile.kind==='duty') return renderDuty(fromCache);
   return App.profile.kind==='student' ? renderStudent(fromCache) : renderCommander(fromCache);
 }
@@ -1439,6 +1491,7 @@ function readSnap_(){
 
 function pollTick(){
   if(!App.token || busyNow() || pollInFlight) return;
+  if(App.profile && App.profile.kind === 'admin') return;   // מסך הניהול מתרענן בכפתור
   pollInFlight = true;
   var isStu = (App.profile.kind === 'student');
   var isDuty = (App.profile.kind === 'duty');
@@ -2416,6 +2469,186 @@ function openRoster_(cls){
     el('rsGo').addEventListener('click', function(){ var b = this; saveHr().then(function(){ return downloadRoster_([cls], b); }).catch(function(e){ toast(e.message, true); }); });
     if(el('rsAll')) el('rsAll').addEventListener('click', function(){ var b = this; saveHr().then(function(){ return downloadRoster_([], b); }).catch(function(e){ toast(e.message, true); }); });
   }).catch(function(e){ closeModal(); toast(e.message, true); });
+}
+
+/* ============ מנהל מערכת ============
+   נתוני מערכת בלבד (מספרים, בלי שמות), וקידום כיתות עם אימות כפול: סיסמה והקלדת משפט אישור. */
+var adm = { stats:null };
+var PROMO_DEFAULT = { 'ט3':'י2', 'ט5':'י5', 'י2':'יא2', 'י5':'יא5', 'יא2':'יב2', 'יא5':'יב5', 'יב2':'יג', 'יג':'יד', 'יד':'ארכיון' };
+var FREE_DB_BYTES = 500 * 1024 * 1024;   // מכסת בסיס הנתונים במסלול החינמי של Supabase
+
+function admBytes_(b){
+  b = +b || 0;
+  if(b >= 1024*1024*1024) return (b/1024/1024/1024).toFixed(2) + ' GB';
+  if(b >= 1024*1024) return (b/1024/1024).toFixed(1) + ' MB';
+  return Math.max(1, Math.round(b/1024)) + ' KB';
+}
+function admNum_(n){ return (+n || 0).toLocaleString('he-IL'); }
+
+function renderAdmin(){
+  App.screen = 'admin';
+  if(!adm.stats) el('view').innerHTML = spinner();
+  callServer('sysStats', App.token).then(function(s){ adm.stats = s; drawAdmin(); })
+    .catch(function(e){ if(isAuthError_(e.message)) return sessionExpired_('החיבור פג, יש להתחבר שוב'); el('view').innerHTML = '<div class="panel"><div class="body">'+esc(e.message)+'</div></div>'; });
+}
+
+function drawAdmin(){
+  var s = adm.stats;
+  var dbPct = Math.min(100, Math.round(s.dbBytes * 100 / FREE_DB_BYTES));
+  var cmdTotal = 0; Object.keys(s.commanders || {}).forEach(function(k){ cmdTotal += s.commanders[k]; });
+  var maxDay = 1; (s.daily || []).forEach(function(d){ if(d.n > maxDay) maxDay = d.n; });
+  var bars = (s.daily || []).map(function(d, i){
+    var h = Math.round(d.n * 100 / maxDay);
+    var we = (d.wd === 5 || d.wd === 6);
+    return '<div class="ad-bar'+(we?' we':'')+'" title="'+esc(d.d)+': '+d.n+' דיווחים"><i style="height:'+Math.max(h, d.n?3:0)+'%"></i>'
+      + '<span>'+(i % 5 === 4 || i === s.daily.length-1 ? esc(d.d) : '')+'</span></div>';
+  }).join('');
+  var tiles = [
+    ['שוחרים פעילים', s.students.active], ['בארכיון', s.students.archived], ['מפקדים פעילים', cmdTotal],
+    ['דיווחים בסך הכל', s.reports.total], ['דיווחים היום', s.reports.today], ['דיווחים ב 30 יום', s.reports.month]
+  ].map(function(t){ return '<div class="ad-tile"><b>'+admNum_(t[1])+'</b><span>'+t[0]+'</span></div>'; }).join('');
+  var classes = (s.classes || []).map(function(c){ return '<span class="ad-chip">'+esc(c.cls)+' <b>'+c.n+'</b></span>'; }).join('') || '<span class="muted">אין שוחרים פעילים</span>';
+  var roles = Object.keys(s.commanders || {}).map(function(r){ return '<span class="ad-chip">'+esc(r)+' <b>'+s.commanders[r]+'</b></span>'; }).join('');
+  var tables = (s.tables || []).map(function(t){
+    return '<tr><td>'+esc(t.name)+'</td><td>'+admNum_(t.rows)+'</td><td>'+admBytes_(t.bytes)+'</td></tr>'; }).join('');
+  var last = (s.promotions || [])[0];
+  var canUndo = last && !last.undone;
+  var promos = (s.promotions || []).map(function(p){
+    var ORD = ['ט3','ט5','י2','י5','יא2','יא5','יב2','יב5','יג','יד'];
+    var arrows = Object.keys(p.map || {}).sort(function(a,b){ var x = ORD.indexOf(a), y = ORD.indexOf(b); return (x<0?99:x) - (y<0?99:y) || a.localeCompare(b,'he'); }).map(function(k){ var v = p.map[k]; return esc(k)+' ← '+esc(v === '__archive__' ? 'ארכיון' : v); }).join(' | ');
+    return '<div class="ad-promo'+(p.undone?' undone':'')+'"><div><b>'+esc(p.at)+'</b> | '+p.moved+' הועברו, '+p.archived+' לארכיון'
+      + (p.moveCommanders ? ' | המפקדים עברו עם הכיתות' : ' | המפקדים נשארו')+(p.undone ? ' | <span class="ad-undone">בוטל ב '+esc(p.undone)+'</span>' : '')+'</div>'
+      + '<div class="muted" style="font-size:12.5px;margin-top:3px">'+arrows+'</div></div>';
+  }).join('') || '<div class="muted">עוד לא בוצע קידום כיתות</div>';
+
+  el('view').innerHTML = '<div class="fade">'
+    + '<div class="toolbar"><button class="btn ghost" id="adRefresh">רענון</button><button class="btn ghost" id="adPw">שינוי סיסמה</button></div>'
+    + '<div class="ad-tiles">'+tiles+'</div>'
+    + '<div class="ad-grid">'
+    +   '<div class="panel"><div class="head"><div><h2>אחסון</h2><div class="sub" style="margin-top:6px">בסיס הנתונים: <b>'+admBytes_(s.dbBytes)+'</b> מתוך 500 MB במסלול החינמי ('+dbPct+'%)'
+    +     (s.storageBytes ? ' | קבצים: <b>'+admBytes_(s.storageBytes)+'</b>' : '')+'</div>'
+    +     '<div class="dty-prog ad-prog'+(dbPct>80?' hot':'')+'" style="margin-top:12px"><i style="width:'+Math.max(dbPct,1)+'%"></i></div></div></div>'
+    +     '<div class="body" style="padding-top:0"><table class="ad-tbl"><thead><tr><th>טבלה</th><th>שורות</th><th>גודל</th></tr></thead><tbody>'+tables+'</tbody></table></div></div>'
+    +   '<div class="panel"><div class="head"><div><h2>דיווחים ב 30 הימים האחרונים</h2><div class="sub" style="margin-top:6px">דיווח אחרון: '+esc(s.reports.lastAt || 'אין')+' | השבוע: '+admNum_(s.reports.week)+'</div></div></div>'
+    +     '<div class="body"><div class="ad-bars">'+bars+'</div></div>'
+    +     '<div class="body" style="padding-top:0"><div class="ad-lbl">שוחרים פעילים לפי כיתה</div><div class="ad-chips">'+classes+'</div>'
+    +     '<div class="ad-lbl">מפקדים לפי תפקיד</div><div class="ad-chips">'+roles+'</div>'
+    +     '<div class="ad-lbl">עוד במערכת</div><div class="ad-chips">'
+    +       '<span class="ad-chip">יציאות <b>'+s.other.trips+'</b></span><span class="ad-chip">מערכות שעות <b>'+s.other.schedules+'</b></span>'
+    +       '<span class="ad-chip">הודעות <b>'+s.other.messages+'</b></span><span class="ad-chip">מכשירים עם התראות <b>'+s.other.pushSubs+'</b></span>'
+    +       '<span class="ad-chip">פריטי ציוד <b>'+s.other.equipment+'</b></span><span class="ad-chip">שוחרים לא פעילים <b>'+s.students.inactive+'</b></span></div></div></div>'
+    + '</div>'
+    + '<div class="panel ad-danger"><div class="head"><div><h2>קידום כיתות</h2>'
+    +   '<div class="sub" style="margin-top:6px">מעלה את כל השוחרים כיתה אחת. כיתה שעוברת לארכיון לא נמחקת: השוחרים יוצאים מהרשימות, וההיסטוריה נשמרת. לפני כל קידום נשמר צילום מצב, ואפשר לבטל את הקידום האחרון.</div></div></div>'
+    +   '<div class="body"><div class="ad-actions"><button class="btn gold" id="adPromote">קידום כיתות</button>'
+    +   (canUndo ? '<button class="btn ghost" id="adUndo">ביטול הקידום האחרון</button>' : '') + '</div>'
+    +   '<div class="ad-lbl" style="margin-top:18px">היסטוריית קידומים</div>'+promos+'</div></div>'
+    + '<div class="muted center" style="font-size:12.5px;margin-top:14px">כניסה אחרונה: '+esc(s.lastLogin || '')+'</div>'
+    + '</div>';
+  el('adRefresh').addEventListener('click', renderAdmin);
+  el('adPw').addEventListener('click', admChangePw_);
+  el('adPromote').addEventListener('click', admPromoteStep1_);
+  if(el('adUndo')) el('adUndo').addEventListener('click', admUndo_);
+}
+
+function admPromoteStep1_(){
+  var s = adm.stats, known = {};
+  (s.classes || []).forEach(function(c){ known[c.cls] = 1; });
+  Object.keys(PROMO_DEFAULT).forEach(function(k){ known[k] = 1; if(PROMO_DEFAULT[k] !== 'ארכיון') known[PROMO_DEFAULT[k]] = 1; });
+  var opts = Object.keys(known).sort().map(function(c){ return '<option value="'+esc(c)+'">'; }).join('') + '<option value="ארכיון">';
+  var last = (s.promotions || []).filter(function(p){ return !p.undone; })[0];
+  var rows = (s.classes || []).map(function(c){
+    var def = PROMO_DEFAULT[c.cls] || '';
+    return '<tr><td><b>'+esc(c.cls)+'</b></td><td>'+c.n+'</td><td class="ad-arrow">←</td>'
+      + '<td><input class="adp-to" data-c="'+esc(c.cls)+'" list="adpList" value="'+esc(def)+'" placeholder="ללא שינוי"></td></tr>';
+  }).join('');
+  el('modalHost').innerHTML = '<div class="modal-bg" id="adpBg"><div class="modal" style="max-width:560px;max-height:92vh;overflow:auto"><div class="m-body">'
+    + '<h3>קידום כיתות: שלב 1 מתוך 2</h3>'
+    + (last ? '<div class="banner warn" style="margin-bottom:14px">שימו לב: כבר בוצע קידום ב '+esc(last.at)+'. קידום נוסף יעלה את כולם כיתה פעם נוספת.</div>' : '')
+    + '<p class="muted" style="margin-top:0">בדקו את היעד של כל כיתה. כדי להעביר כיתה לארכיון כתבו "ארכיון". שדה ריק משאיר את הכיתה במקומה.</p>'
+    + '<table class="ad-tbl ad-map"><thead><tr><th>כיתה היום</th><th>שוחרים</th><th></th><th>עוברת ל</th></tr></thead><tbody>'+rows+'</tbody></table>'
+    + '<datalist id="adpList">'+opts+'</datalist>'
+    + '<div class="ad-lbl" style="margin-top:16px">מה קורה עם המפקדים (מק"ס, עוזר, מורה, חנתר)?</div>'
+    + '<label class="ad-radio"><input type="radio" name="adpCmd" value="1"> המפקדים עוברים עם השוחרים לכיתה החדשה</label>'
+    + '<label class="ad-radio"><input type="radio" name="adpCmd" value="0"> המפקדים נשארים על שם הכיתה, ומקבלים את השוחרים שעולים אליה</label>'
+    + '<div class="m-actions"><button class="btn gold" id="adpNext">המשך לאישור</button><button class="btn ghost" id="adpNo">ביטול</button></div>'
+    + '</div></div></div>';
+  el('adpNo').addEventListener('click', closeModal);
+  el('adpNext').addEventListener('click', function(){
+    var map = {}, lines = [], bad = '';
+    Array.prototype.slice.call(document.querySelectorAll('.adp-to')).forEach(function(i){
+      var from = i.getAttribute('data-c'), to = i.value.trim().replace(/["'׳״\s]/g, '');
+      if(!to || to === from) return;
+      map[from] = (to === 'ארכיון') ? '__archive__' : to;
+      var n = (s.classes.filter(function(c){ return c.cls === from; })[0] || {}).n || 0;
+      lines.push({ from:from, to:to, n:n });
+    });
+    var cmd = document.querySelector('input[name="adpCmd"]:checked');
+    if(!lines.length){ toast('לא נבחרה אף כיתה לקידום', true); return; }
+    if(!cmd){ toast('יש לבחור מה קורה עם המפקדים', true); return; }
+    admPromoteStep2_(map, lines, cmd.value === '1');
+  });
+}
+
+function admPromoteStep2_(map, lines, moveCmd){
+  var moved = 0, arch = 0;
+  lines.forEach(function(l){ if(l.to === 'ארכיון') arch += l.n; else moved += l.n; });
+  var list = lines.map(function(l){ return '<div class="ad-sum"><b>'+esc(l.from)+'</b> ('+l.n+') ← '+(l.to === 'ארכיון' ? '<b class="ad-arch">ארכיון</b>' : '<b>'+esc(l.to)+'</b>')+'</div>'; }).join('');
+  el('modalHost').innerHTML = '<div class="modal-bg" id="adp2Bg"><div class="modal" style="max-width:520px;max-height:92vh;overflow:auto"><div class="m-body">'
+    + '<h3>קידום כיתות: שלב 2 מתוך 2</h3>'
+    + '<div class="banner warn" style="margin-bottom:12px">'+moved+' שוחרים יעלו כיתה ו '+arch+' יעברו לארכיון. '+(moveCmd ? 'המפקדים יעברו עם הכיתות.' : 'המפקדים יישארו על שם הכיתה.')+'</div>'
+    + list
+    + '<label style="margin-top:16px">אימות 1: סיסמת מנהל המערכת</label><input type="password" id="adp2Pw" autocomplete="off">'
+    + '<label style="margin-top:12px">אימות 2: הקלידו <b>קידום כיתות</b></label><input id="adp2Ph" autocomplete="off">'
+    + '<div class="m-actions"><button class="btn gold" id="adp2Go" disabled>ביצוע קידום</button><button class="btn ghost" id="adp2Back">חזרה</button></div>'
+    + '</div></div></div>';
+  function chk(){ el('adp2Go').disabled = !(el('adp2Pw').value && el('adp2Ph').value.trim() === 'קידום כיתות'); }
+  el('adp2Pw').addEventListener('input', chk); el('adp2Ph').addEventListener('input', chk);
+  el('adp2Back').addEventListener('click', admPromoteStep1_);
+  el('adp2Go').addEventListener('click', function(){
+    var b = el('adp2Go'); b.disabled = true; b.textContent = 'מבצע';
+    callServer('sysPromote', App.token, el('adp2Pw').value, el('adp2Ph').value.trim(), map, moveCmd).then(function(r){
+      closeModal(); toast('הקידום בוצע: '+r.moved+' שוחרים עלו כיתה, '+r.archived+' עברו לארכיון'); renderAdmin();
+    }).catch(function(e){ b.disabled = false; b.textContent = 'ביצוע קידום'; toast(e.message, true); });
+  });
+}
+
+function admUndo_(){
+  var last = (adm.stats.promotions || [])[0]; if(!last) return;
+  el('modalHost').innerHTML = '<div class="modal-bg" id="aduBg"><div class="modal"><div class="m-body">'
+    + '<h3>ביטול הקידום האחרון</h3>'
+    + '<p class="muted" style="margin-top:0">הקידום מ '+esc(last.at)+' יבוטל: כל השוחרים יחזרו לכיתה שהייתה להם לפניו, כולל מי שעבר לארכיון'+(last.moveCommanders ? ', והמפקדים יחזרו לכיתות הקודמות' : '')+'.</p>'
+    + '<label>אימות 1: סיסמת מנהל המערכת</label><input type="password" id="aduPw" autocomplete="off">'
+    + '<label style="margin-top:12px">אימות 2: הקלידו <b>ביטול קידום</b></label><input id="aduPh" autocomplete="off">'
+    + '<div class="m-actions"><button class="btn gold" id="aduGo" disabled>ביטול הקידום</button><button class="btn ghost" id="aduNo">סגירה</button></div>'
+    + '</div></div></div>';
+  function chk(){ el('aduGo').disabled = !(el('aduPw').value && el('aduPh').value.trim() === 'ביטול קידום'); }
+  el('aduPw').addEventListener('input', chk); el('aduPh').addEventListener('input', chk);
+  el('aduNo').addEventListener('click', closeModal);
+  el('aduGo').addEventListener('click', function(){
+    var b = el('aduGo'); b.disabled = true; b.textContent = 'מבטל';
+    callServer('sysPromoteUndo', App.token, el('aduPw').value, el('aduPh').value.trim()).then(function(r){
+      closeModal(); toast('הקידום בוטל. '+r.restored+' שוחרים חזרו לכיתות הקודמות'); renderAdmin();
+    }).catch(function(e){ b.disabled = false; b.textContent = 'ביטול הקידום'; toast(e.message, true); });
+  });
+}
+
+function admChangePw_(){
+  el('modalHost').innerHTML = '<div class="modal-bg" id="adcBg"><div class="modal"><div class="m-body">'
+    + '<h3>שינוי סיסמה</h3>'
+    + '<label>סיסמה נוכחית</label><input type="password" id="adcOld" autocomplete="off">'
+    + '<label style="margin-top:10px">סיסמה חדשה (לפחות 8 תווים)</label><input type="password" id="adcNew" autocomplete="off">'
+    + '<label style="margin-top:10px">שוב את הסיסמה החדשה</label><input type="password" id="adcNew2" autocomplete="off">'
+    + '<div class="m-actions"><button class="btn gold" id="adcGo">שמירה</button><button class="btn ghost" id="adcNo">ביטול</button></div>'
+    + '</div></div></div>';
+  el('adcNo').addEventListener('click', closeModal);
+  el('adcGo').addEventListener('click', function(){
+    var n = el('adcNew').value;
+    if(n.length < 8){ toast('הסיסמה החדשה צריכה להכיל לפחות 8 תווים', true); return; }
+    if(n !== el('adcNew2').value){ toast('הסיסמאות החדשות אינן זהות', true); return; }
+    callServer('sysChangePassword', App.token, el('adcOld').value, n).then(function(){ closeModal(); toast('הסיסמה עודכנה'); })
+      .catch(function(e){ toast(e.message, true); });
+  });
 }
 
 /* ============ יציאות וסיורים ============
